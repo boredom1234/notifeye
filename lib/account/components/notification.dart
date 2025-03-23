@@ -1,10 +1,12 @@
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
-// import 'package:flutter_sms/flutter_sms.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 import '../../service/firebase.dart';
 import '../../service/global.dart';
+import '../../utils/theme.dart';
 import '../models/info_model.dart';
 
 class NotificationController {
@@ -92,24 +94,19 @@ class NotificationController {
   //--------------SOS Message------------------
   static String message = "";
   static String initialMessage = "";
-  static String addtionalInfo = "";
-  static List<String> contacts = [];
+  static String additionalInfo = "";
+  static List<String> phoneContacts = [];
+  static List<String> emailContacts = [];
 
   static Future<Position> _determinePosition() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       return Future.error('Location services are disabled');
     }
 
-    permission = await Geolocator.checkPermission();
-
+    LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-
       if (permission == LocationPermission.denied) {
         return Future.error("Location permission denied");
       }
@@ -119,74 +116,224 @@ class NotificationController {
       return Future.error('Location permissions are permanently denied');
     }
 
-    Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
-
-    return position;
+    return await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
   }
 
   //get initial message content
-  static Future getMessage(int type) async {
+  static Future<void> getMessage(int type) async {
     if (type == 1) {
-      initialMessage = "SOS! Immediate Help required:";
+      initialMessage = "🆘 SOS! Immediate Help Required!";
     } else {
-      initialMessage = "Fire SOS Alert! Immediate Help required:";
+      initialMessage = "🔥 FIRE SOS ALERT! Immediate Help Required!";
     }
-    // bool _result = await canSendSMS();
+
     String location = await getLocation();
-    message = "\nName: ${Global.instance.user!.fName!} \n$location";
+    message = """
+Name: ${Global.instance.user!.fName!}
+Phone: ${Global.instance.user!.mobileNo!}
+$location
+
+This is an automated emergency alert. The sender requires immediate assistance.""";
   }
 
   //get user's location
-  static getLocation() async {
-    final position = await _determinePosition();
-    return "Longitude: ${position.longitude} and Latitude: ${position.latitude}";
+  static Future<String> getLocation() async {
+    try {
+      final position = await _determinePosition();
+      String googleMapsLink =
+          'https://www.google.com/maps?q=${position.latitude},${position.longitude}';
+      return """Location: $googleMapsLink
+Coordinates: ${position.latitude}, ${position.longitude}""";
+    } catch (e) {
+      return "Location: Unable to get current location";
+    }
   }
 
-  static Future getInfo() async {
-    addtionalInfo = "";
-    var data = await getSOSData(Global.instance.user!.uId!);
-    print(data);
-    List<Info> infoList = [];
-    if (data != null) {
-      if (data["info"] != null) {
-        data["info"].forEach((dt) {
-          Map info = dt;
-          infoList.add(Info(info.keys.first, info.values.first));
-        });
-        infoList.forEach((i) {
-          addtionalInfo += "\n${i.type}: "
-              "\n${i.description}";
-        });
-      }
-      if (data["setting"] != null) {
-        if (data["setting"]["messageContact"] == true) {
-          contacts = await getRecipientContact(Global.instance.user!.uId!);
-          print(contacts);
+  static Future<void> getInfo() async {
+    additionalInfo = "";
+    phoneContacts.clear();
+    emailContacts.clear();
+
+    try {
+      print('Fetching SOS data for user: ${Global.instance.user!.uId!}');
+      var data = await getSOSData(Global.instance.user!.uId!);
+      print('SOS Data received: $data');
+
+      if (data != null) {
+        if (data["info"] != null) {
+          List<Info> infoList = [];
+          data["info"].forEach((dt) {
+            Map info = dt;
+            infoList.add(Info(info.keys.first, info.values.first));
+          });
+          infoList.forEach((i) {
+            additionalInfo += "\n${i.type}: ${i.description}";
+          });
         }
+
+        print('Fetching emergency contacts...');
+        var contacts = await getRecipientContact(Global.instance.user!.uId!);
+        print('Emergency contacts received: $contacts');
+
+        if (contacts != null) {
+          for (var contact in contacts) {
+            if (contact["contactNo"] != null &&
+                contact["contactNo"].toString().isNotEmpty) {
+              print('Adding phone contact: ${contact["contactNo"]}');
+              phoneContacts.add(contact["contactNo"].toString());
+            }
+            if (contact["email"] != null &&
+                contact["email"].toString().isNotEmpty) {
+              print('Adding email contact: ${contact["email"]}');
+              emailContacts.add(contact["email"].toString());
+            }
+          }
+        }
+        print('Final phone contacts list: $phoneContacts');
+        print('Final email contacts list: $emailContacts');
       }
+    } catch (e) {
+      print('Error getting SOS info: $e');
     }
   }
 
   static Future<void> _sendSMS(int type) async {
-    List<String> recipents = ["+918145181703"];
+    try {
+      await getMessage(type);
+      print('Getting emergency contacts...');
+      await getInfo();
+      print('Retrieved phone contacts: $phoneContacts');
 
-    await getMessage(type).whenComplete(() {
-      getInfo().whenComplete(() async {
-        recipents.addAll(contacts);
+      // Get emergency contacts first
+      List<String> recipients = [];
+      recipients.addAll(phoneContacts);
+      print('Recipients after adding contacts: $recipients');
 
-        // try {
-        //   String _result = await sendSMS(
-        //       message: "$initialMessage \n$message \n$addtionalInfo",
-        //       recipients: recipents,
-        //       sendDirect: true);
+      // Only add default emergency number if no contacts are available
+      if (recipients.isEmpty) {
+        print('No emergency contacts found, adding default emergency number');
+        recipients.add("+911");
+      }
 
-        //   print(_result);
-        // } catch (onError) {
-        //   print(onError);
-        // }
-        // ;
-      });
-    });
+      String fullMessage = """$initialMessage
+
+$message""";
+
+      if (additionalInfo.isNotEmpty) {
+        fullMessage += "\n\nAdditional Information:$additionalInfo";
+      }
+
+      // Send SMS
+      if (recipients.isNotEmpty) {
+        try {
+          // Combine all recipients with semicolons for Android
+          String recipientString = recipients.join(';');
+          print('Attempting to send SMS to: $recipientString');
+
+          // Create the SMS URI with the message
+          final Uri smsUri = Uri.parse(
+            'sms:$recipientString?body=${Uri.encodeComponent(fullMessage)}',
+          );
+
+          print('SMS URI created: $smsUri');
+
+          // Configure URL launcher
+          final bool launched = await launchUrl(
+            smsUri,
+            mode: LaunchMode.externalApplication,
+            webViewConfiguration: const WebViewConfiguration(
+              enableJavaScript: true,
+              enableDomStorage: true,
+            ),
+          );
+
+          if (launched) {
+            Fluttertoast.showToast(
+              msg: 'SMS app opened with emergency message',
+              backgroundColor: AppTheme.success,
+            );
+          } else {
+            // If SMS fails, try emergency call with the first recipient
+            final Uri telUri = Uri.parse('tel:${recipients[0]}');
+            if (await canLaunchUrl(telUri)) {
+              await launchUrl(
+                telUri,
+                mode: LaunchMode.externalApplication,
+              );
+              Fluttertoast.showToast(
+                msg: 'Dialing emergency contact',
+                backgroundColor: AppTheme.warning,
+              );
+            }
+          }
+        } catch (e) {
+          print('Error launching SMS: $e');
+          // Try emergency call as fallback
+          try {
+            final Uri telUri = Uri.parse('tel:${recipients[0]}');
+            await launchUrl(
+              telUri,
+              mode: LaunchMode.externalApplication,
+            );
+            Fluttertoast.showToast(
+              msg: 'Dialing emergency contact',
+              backgroundColor: AppTheme.warning,
+            );
+          } catch (e) {
+            print('Error making emergency call: $e');
+            Fluttertoast.showToast(
+              msg: 'Failed to make emergency call',
+              backgroundColor: AppTheme.error,
+            );
+          }
+        }
+      } else {
+        Fluttertoast.showToast(
+          msg: 'No emergency contacts found',
+          backgroundColor: AppTheme.warning,
+        );
+      }
+
+      // Send Email
+      if (emailContacts.isNotEmpty) {
+        try {
+          final String subject = Uri.encodeComponent(initialMessage);
+          final String body = Uri.encodeComponent(fullMessage);
+          final String emailList = emailContacts.join(',');
+
+          final Uri emailUri = Uri.parse(
+            'mailto:$emailList?subject=$subject&body=$body',
+          );
+
+          final bool launched = await launchUrl(
+            emailUri,
+            mode: LaunchMode.externalApplication,
+          );
+
+          if (launched) {
+            Fluttertoast.showToast(
+              msg: 'Email app opened with emergency message',
+              backgroundColor: AppTheme.success,
+            );
+          } else {
+            throw 'Could not launch email app';
+          }
+        } catch (e) {
+          print('Error launching email: $e');
+          Fluttertoast.showToast(
+            msg: 'Failed to open email app',
+            backgroundColor: AppTheme.error,
+          );
+        }
+      }
+    } catch (e) {
+      print('Error in _sendSMS: $e');
+      Fluttertoast.showToast(
+        msg: 'Error preparing emergency messages',
+        backgroundColor: AppTheme.error,
+      );
+    }
   }
 }

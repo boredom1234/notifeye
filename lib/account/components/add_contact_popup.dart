@@ -26,6 +26,7 @@ class _AddEmergencyContactState extends State<AddEmergencyContact> {
   String? fName = "";
   String? relation = "";
   String? contactNo = "";
+  String? email = "";
 
   String uID = Global.instance.user!.uId!;
 
@@ -51,6 +52,7 @@ class _AddEmergencyContactState extends State<AddEmergencyContact> {
       fName = widget.mapEdit.fname;
       relation = widget.mapEdit.relation;
       contactNo = widget.mapEdit.contactNo;
+      email = widget.mapEdit.email;
     }
     super.initState();
   }
@@ -58,9 +60,11 @@ class _AddEmergencyContactState extends State<AddEmergencyContact> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: isEdit
-          ? const Text('Edit Emergency Contact')
-          : const Text('Add Emergency Contact'),
+      backgroundColor: AppTheme.cardColor,
+      title: Text(
+        isEdit ? 'Edit Emergency Contact' : 'Add Emergency Contact',
+        style: AppTheme.titleLarge.copyWith(color: AppTheme.textColor),
+      ),
       scrollable: true,
       content: Padding(
         padding: const EdgeInsets.all(5.0),
@@ -69,23 +73,27 @@ class _AddEmergencyContactState extends State<AddEmergencyContact> {
           child: Column(
             children: <Widget>[
               getTextField(
-                  text: fName,
-                  label: 'Full Name',
-                  hint: 'Enter name of the person',
-                  valError: 'Please enter the name',
-                  onChanged: (value) {
-                    fName = value;
-                  }),
+                text: fName,
+                label: 'Full Name',
+                hint: 'Enter name of the person',
+                icon: Icons.person_outline,
+                valError: 'Please enter the name',
+                onChanged: (value) {
+                  fName = value;
+                },
+              ),
+              const SizedBox(height: 16),
               isEdit ? selectEditRelationField() : selectRelationField(),
+              const SizedBox(height: 16),
               getTextField(
                 text: contactNo,
                 label: 'Contact Number',
                 hint: 'Enter contact no. of the person',
+                icon: Icons.phone_outlined,
                 validator: (val) {
                   if (val!.isEmpty) {
                     return "Please enter the contact no.";
-                  } else if (!(val.isEmpty) &&
-                      !RegExp(r"^(\d+)*$").hasMatch(val)) {
+                  } else if (!RegExp(r"^(\d+)*$").hasMatch(val)) {
                     return "Enter a valid contact no.";
                   }
                   return null;
@@ -94,169 +102,107 @@ class _AddEmergencyContactState extends State<AddEmergencyContact> {
                   contactNo = value;
                 },
               ),
+              const SizedBox(height: 16),
+              getTextField(
+                text: email,
+                label: 'Email Address',
+                hint: 'Enter email address (optional)',
+                icon: Icons.email_outlined,
+                validator: (val) {
+                  if (val != null && val.isNotEmpty) {
+                    if (!RegExp(r"^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
+                        .hasMatch(val)) {
+                      return "Enter a valid email address";
+                    }
+                  }
+                  return null;
+                },
+                onChanged: (value) {
+                  email = value;
+                },
+              ),
             ],
           ),
         ),
       ),
       actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          style: TextButton.styleFrom(
+            foregroundColor: AppTheme.textSecondary,
+          ),
+          child: Text('Cancel', style: AppTheme.bodyMedium),
+        ),
         ElevatedButton(
-            style: ButtonStyle(
-                backgroundColor: MaterialStateProperty.all(Colors.black)),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(color: Colors.white),
-            ),
-            onPressed: () {
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryColor,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          ),
+          child: Text(
+            isEdit ? "Update" : "Add",
+            style: AppTheme.bodyMedium.copyWith(color: Colors.white),
+          ),
+          onPressed: () {
+            if (_formKey.currentState!.validate()) {
+              if (isEdit) {
+                var contact =
+                    Contact(id!, fName!, relation!, contactNo!, email);
+                widget.onEdit(contact);
+              } else {
+                DatabaseReference contactRef = FirebaseDatabase.instance
+                    .ref()
+                    .child('contacts')
+                    .child(uID);
+
+                String contactID = contactRef.push().key!;
+
+                contactRef.child(contactID).set({
+                  'fname': fName,
+                  'relation': relation,
+                  'contactNo': contactNo,
+                  'email': email,
+                });
+
+                Fluttertoast.showToast(
+                  msg: 'Emergency contact added successfully',
+                  backgroundColor: AppTheme.success,
+                );
+              }
               Navigator.of(context).pop();
-            }),
-        isEdit
-            ? ElevatedButton(
-                style: ButtonStyle(
-                    backgroundColor:
-                        MaterialStateProperty.all(Colors.red.shade900)),
-                child: const Text(
-                  "Update",
-                  style: TextStyle(color: Colors.white),
-                ),
-                onPressed: () {
-                  setState(() {
-                    var contact = Contact(id!, fName!, relation!, contactNo);
-                    widget.onEdit(contact);
-                    Navigator.of(context).pop();
-                  });
-                })
-            : ElevatedButton(
-                style: ButtonStyle(
-                    backgroundColor:
-                        MaterialStateProperty.all(Colors.red.shade900)),
-                child: const Text(
-                  "Add",
-                  style: TextStyle(color: Colors.white),
-                ),
-                onPressed: () {
-                  setState(() {
-                    DatabaseReference contactRef = FirebaseDatabase.instance
-                        .ref()
-                        .child('contacts')
-                        .child(uID);
-
-                    String contactID = contactRef.push().key!;
-
-                    //add new emergency contact information to database
-                    contactRef.child(contactID).set({
-                      'fname': fName,
-                      'relation': relation,
-                      'contactNo': contactNo,
-                    });
-
-                    Fluttertoast.showToast(
-                        msg: "New Contact Added Successfully");
-
-                    Navigator.of(context).pop();
-                  });
-                }),
+            }
+          },
+        ),
       ],
     );
   }
 
-  selectRelationField() {
+  Widget getTextField({
+    String? text,
+    String? label,
+    String? hint,
+    IconData? icon,
+    String? valError,
+    Function(String)? onChanged,
+    String? Function(String?)? validator,
+  }) {
     return Container(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Container(
-          width: 400,
-          padding: const EdgeInsets.only(left: 20, right: 20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10.0),
-            border: Border.all(color: Colors.grey.shade400),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                enabledBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-              ),
-              isExpanded: true,
-              hint: Text("Please select your relation"),
-              items: type.map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              validator: (value) {
-                if (relation == null) {
-                  return "Please select your relation";
-                }
-                return null;
-              },
-              onChanged: (value) {
-                relation = value.toString();
-              },
-            ),
-          )),
-    );
-  }
-
-  selectEditRelationField() {
-    return Container(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Container(
-          width: 400,
-          padding: const EdgeInsets.only(left: 20, right: 20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10.0),
-            border: Border.all(color: Colors.grey.shade400),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                enabledBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-              ),
-              isExpanded: true,
-              value: relation!,
-              hint: Text("Please select your relation"),
-              items: type.map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              validator: (value) {
-                if (relation == null) {
-                  return "Please select your relation";
-                }
-                return null;
-              },
-              onChanged: (value) {
-                relation = value.toString();
-              },
-            ),
-          )),
-    );
-  }
-
-  getTextField(
-      {String? text,
-      String? label,
-      String? hint,
-      String? valError,
-      Function(String)? onChanged,
-      bool? obscureText,
-      String? Function(String?)? validator}) {
-    TextEditingController controller = TextEditingController();
-    controller.text = text!;
-
-    return Container(
-      padding: EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.dividerColor),
+      ),
       child: TextFormField(
-        controller: isEdit ? controller : null,
-        decoration: ThemeHelper().textInputDecoration(label!, hint!),
-        onChanged: onChanged,
+        initialValue: text,
+        style: AppTheme.bodyLarge,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          prefixIcon: Icon(icon, color: AppTheme.primaryColor),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
         validator: validator ??
             (val) {
               if (val!.isEmpty) {
@@ -264,8 +210,72 @@ class _AddEmergencyContactState extends State<AddEmergencyContact> {
               }
               return null;
             },
+        onChanged: onChanged,
       ),
-      decoration: ThemeHelper().inputBoxDecorationShaddow(),
+    );
+  }
+
+  Widget selectRelationField() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.dividerColor),
+      ),
+      child: DropdownButtonFormField(
+        decoration: InputDecoration(
+          prefixIcon: Icon(Icons.family_restroom, color: AppTheme.primaryColor),
+          border: InputBorder.none,
+        ),
+        hint: Text('Select Relation', style: AppTheme.bodyMedium),
+        items: type.map((String items) {
+          return DropdownMenuItem(
+            value: items,
+            child: Text(items, style: AppTheme.bodyMedium),
+          );
+        }).toList(),
+        validator: (value) {
+          if (value == null) {
+            return "Please select the relation";
+          }
+          return null;
+        },
+        onChanged: (String? newValue) {
+          setState(() {
+            relation = newValue!;
+          });
+        },
+      ),
+    );
+  }
+
+  Widget selectEditRelationField() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.dividerColor),
+      ),
+      child: DropdownButtonFormField(
+        decoration: InputDecoration(
+          prefixIcon: Icon(Icons.family_restroom, color: AppTheme.primaryColor),
+          border: InputBorder.none,
+        ),
+        value: relation,
+        items: type.map((String items) {
+          return DropdownMenuItem(
+            value: items,
+            child: Text(items, style: AppTheme.bodyMedium),
+          );
+        }).toList(),
+        onChanged: (String? newValue) {
+          setState(() {
+            relation = newValue!;
+          });
+        },
+      ),
     );
   }
 }

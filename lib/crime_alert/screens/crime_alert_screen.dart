@@ -577,18 +577,23 @@ class _CrimeAlertsScreenState extends State<CrimeAlertsScreen> {
                   markerId: MarkerId(entry.key),
                   position: LatLng(latitude, longitude),
                   icon: _alertMarkerIcon ?? BitmapDescriptor.defaultMarker,
-                  alpha: isViewed
-                      ? 0.6
-                      : 1.0, // Make viewed markers semi-transparent
+                  alpha: isViewed ? 0.6 : 1.0,
                   infoWindow: InfoWindow(
-                    title: alertData["type"],
-                    snippet: 'Reported: ${alertData["date"]}',
+                    title: '⚠️ ${alertData["type"]}',
+                    snippet: isViewed
+                        ? 'Click for details'
+                        : '🔔 New Alert - Click for details',
                     onTap: () {
                       _markAlertAsViewed(entry.key);
                       showModalBottomSheet(
                         context: context,
                         backgroundColor: Colors.transparent,
+                        isScrollControlled: true,
                         builder: (context) => Container(
+                          constraints: BoxConstraints(
+                            maxHeight:
+                                MediaQuery.of(context).size.height * 0.75,
+                          ),
                           margin: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: AppTheme.cardColor,
@@ -597,6 +602,7 @@ class _CrimeAlertsScreenState extends State<CrimeAlertsScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              // Drag Handle
                               Container(
                                 width: 40,
                                 height: 4,
@@ -606,65 +612,180 @@ class _CrimeAlertsScreenState extends State<CrimeAlertsScreen> {
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
-                              ListTile(
-                                leading: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: markerColor.withOpacity(0.1),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.warning_rounded,
-                                    color: markerColor,
+
+                              // Alert Type Header
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.surfaceColor,
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(16),
+                                    topRight: Radius.circular(16),
                                   ),
                                 ),
-                                title: Text(
-                                  alertData["type"],
-                                  style: AppTheme.titleMedium,
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    Text(
-                                      'Reported: ${alertData["date"]}',
-                                      style: AppTheme.bodyMedium.copyWith(
-                                        color: AppTheme.textSecondary,
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: markerColor.withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.warning_rounded,
+                                        color: markerColor,
+                                        size: 28,
                                       ),
                                     ),
-                                    if (!isViewed)
-                                      Container(
-                                        margin: const EdgeInsets.only(top: 4),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.primaryColor
-                                              .withOpacity(0.1),
-                                          borderRadius:
-                                              BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          'New',
-                                          style: AppTheme.bodySmall.copyWith(
-                                            color: AppTheme.primaryColor,
-                                            fontWeight: FontWeight.bold,
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            alertData["type"],
+                                            style:
+                                                AppTheme.titleMedium.copyWith(
+                                              color: AppTheme.textColor,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
-                                        ),
+                                          const SizedBox(height: 4),
+                                          if (!isViewed)
+                                            Container(
+                                              margin:
+                                                  const EdgeInsets.only(top: 4),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: AppTheme.primaryColor
+                                                    .withOpacity(0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                'New Alert',
+                                                style:
+                                                    AppTheme.bodySmall.copyWith(
+                                                  color: AppTheme.primaryColor,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
+                                    ),
                                   ],
                                 ),
                               ),
-                              if (alertData["description"] != null) ...[
-                                Padding(
+
+                              // Alert Details
+                              Flexible(
+                                child: SingleChildScrollView(
                                   padding: const EdgeInsets.all(16),
-                                  child: Text(
-                                    alertData["description"],
-                                    style: AppTheme.bodyMedium,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Time and Reporter Section
+                                      Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.surfaceColor
+                                              .withOpacity(0.5),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            _detailRow(
+                                              Icons.access_time,
+                                              'Reported',
+                                              alertData["date"] ?? 'Unknown',
+                                            ),
+                                            const Divider(height: 16),
+                                            _detailRow(
+                                              Icons.person_outline,
+                                              'Reported by',
+                                              alertData["reporter_name"] ??
+                                                  'Anonymous',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+
+                                      // Description Section
+                                      if (alertData["description"] != null &&
+                                          alertData["description"]
+                                              .toString()
+                                              .isNotEmpty) ...[
+                                        Text(
+                                          'Description',
+                                          style: AppTheme.titleSmall.copyWith(
+                                            color: AppTheme.primaryColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.surfaceColor
+                                                .withOpacity(0.5),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            alertData["description"],
+                                            style: AppTheme.bodyMedium,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                      ],
+
+                                      // Location Section
+                                      Text(
+                                        'Location',
+                                        style: AppTheme.titleSmall.copyWith(
+                                          color: AppTheme.primaryColor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.surfaceColor
+                                              .withOpacity(0.5),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            _detailRow(
+                                              Icons.location_on_outlined,
+                                              'Coordinates',
+                                              '${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}',
+                                            ),
+                                            if (alertData["address"] !=
+                                                null) ...[
+                                              const Divider(height: 16),
+                                              _detailRow(
+                                                Icons.map_outlined,
+                                                'Address',
+                                                alertData["address"],
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                              const SizedBox(height: 16),
+                              ),
                             ],
                           ),
                         ),
@@ -844,5 +965,37 @@ class _CrimeAlertsScreenState extends State<CrimeAlertsScreen> {
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  Widget _detailRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 20,
+          color: AppTheme.primaryColor,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: AppTheme.bodySmall.copyWith(
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: AppTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

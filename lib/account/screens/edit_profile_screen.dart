@@ -71,106 +71,237 @@ class _EditProfileState extends State<EditProfile> {
       appBar: customAppBar(
         title: "Edit Profile",
       ),
-      backgroundColor: secondaryColor,
+      backgroundColor: AppTheme.backgroundColor,
       body: SingleChildScrollView(
-        child: Stack(
-          children: [
-            Container(
-              margin: const EdgeInsets.fromLTRB(25, 50, 25, 10),
-              padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
-              alignment: Alignment.center,
-              child: Column(
-                children: [
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        getAvatarPicker(),
-                        const SizedBox(
-                          height: 30,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+          child: Column(
+            children: [
+              Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(child: getAvatarPicker()),
+                    const SizedBox(height: 32),
+                    Text('Personal Information',
+                        style: AppTheme.titleMedium
+                            .copyWith(color: AppTheme.primaryColor)),
+                    const SizedBox(height: 16),
+                    getTextField(
+                      text: user.fName!,
+                      isEdit: true,
+                      decoration: AppTheme.inputDecoration.copyWith(
+                        labelText: 'Full Name',
+                        prefixIcon: Icon(Icons.person_outline,
+                            color: AppTheme.primaryColor),
+                      ),
+                      readonly: true,
+                    ),
+                    const SizedBox(height: 16),
+                    getTextField(
+                      text: user.iNo!,
+                      isEdit: true,
+                      decoration: AppTheme.inputDecoration.copyWith(
+                        labelText: 'Identity No.',
+                        prefixIcon: Icon(Icons.badge_outlined,
+                            color: AppTheme.primaryColor),
+                      ),
+                      readonly: true,
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: AppTheme.cardColor,
+                      ),
+                      child: TextFormField(
+                        controller: dateCtl,
+                        readOnly: true,
+                        style: AppTheme.bodyLarge,
+                        decoration: AppTheme.inputDecoration.copyWith(
+                          labelText: 'Date of Birth',
+                          prefixIcon: Icon(Icons.calendar_today_outlined,
+                              color: AppTheme.primaryColor),
                         ),
-                        getTextField(
-                          text: user.fName!,
-                          isEdit: true,
-                          decoration: ThemeHelper()
-                              .textInputDecoration('Full Name', ' '),
-                          readonly: true,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text('Contact Information',
+                        style: AppTheme.titleMedium
+                            .copyWith(color: AppTheme.primaryColor)),
+                    const SizedBox(height: 16),
+                    getTextField(
+                      text: user.email!,
+                      isEdit: true,
+                      decoration: AppTheme.inputDecoration.copyWith(
+                        labelText: 'E-mail address',
+                        prefixIcon: Icon(Icons.email_outlined,
+                            color: AppTheme.primaryColor),
+                      ),
+                      readonly: true,
+                    ),
+                    const SizedBox(height: 16),
+                    getTextField(
+                      text: user.mobileNo!,
+                      isEdit: true,
+                      decoration: AppTheme.inputDecoration.copyWith(
+                        labelText: 'Mobile Number',
+                        hintText: 'Enter your mobile number',
+                        prefixIcon: Icon(Icons.phone_outlined,
+                            color: AppTheme.primaryColor),
+                      ),
+                      validator: (val) {
+                        if (val!.isEmpty) {
+                          return "Please enter the mobile number";
+                        } else if (!RegExp(r"^(\d+)*$").hasMatch(val)) {
+                          return "Enter a valid mobile number";
+                        }
+                        return null;
+                      },
+                      onChanged: (value) {
+                        mobileNo = value;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    Text('Address Information',
+                        style: AppTheme.titleMedium
+                            .copyWith(color: AppTheme.primaryColor)),
+                    const SizedBox(height: 16),
+                    getTextField(
+                      text: user.address!,
+                      isEdit: true,
+                      decoration: AppTheme.inputDecoration.copyWith(
+                        labelText: 'Address',
+                        hintText: 'Enter your house/unit no, and street',
+                        prefixIcon: Icon(Icons.home_outlined,
+                            color: AppTheme.primaryColor),
+                      ),
+                      onChanged: (value) {
+                        address = value;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: AppTheme.cardColor,
+                      ),
+                      child: CSCPicker(
+                        dropdownDecoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: AppTheme.cardColor,
+                          border: Border.all(color: AppTheme.dividerColor),
                         ),
-                        getTextField(
-                          text: user.iNo!,
-                          isEdit: true,
-                          decoration: ThemeHelper()
-                              .textInputDecoration('Identity No.', ' '),
-                          readonly: true,
-                        ),
-                        Container(
-                          decoration: ThemeHelper().inputBoxDecorationShaddow(),
-                          child: TextFormField(
-                            controller: dateCtl,
-                            readOnly: true,
-                            decoration: ThemeHelper()
-                                .textInputDecoration('Date of Birth', ' '),
+                        dropdownHeadingStyle: AppTheme.bodyLarge,
+                        dropdownItemStyle: AppTheme.bodyMedium,
+                        selectedItemStyle: AppTheme.bodyLarge
+                            .copyWith(color: AppTheme.primaryColor),
+                        flagState: CountryFlag.DISABLE,
+                        currentCountry: user.country,
+                        currentCity: user.city,
+                        currentState: user.state,
+                        onCountryChanged: (value) {
+                          setState(() {
+                            countryValue = value;
+                          });
+                        },
+                        onStateChanged: (value) {
+                          setState(() {
+                            stateValue = value;
+                          });
+                        },
+                        onCityChanged: (value) {
+                          setState(() {
+                            cityValue = value;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    getTextField(
+                      text: user.zipcode!,
+                      isEdit: true,
+                      decoration: AppTheme.inputDecoration.copyWith(
+                        labelText: 'Zip Code',
+                        hintText: 'Enter your zip code',
+                        prefixIcon: Icon(Icons.location_on_outlined,
+                            color: AppTheme.primaryColor),
+                      ),
+                      onChanged: (value) {
+                        zipcode = value;
+                      },
+                    ),
+                    const SizedBox(height: 32),
+                    Container(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: AppTheme.primaryButtonStyle,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            "Save Changes",
+                            style: AppTheme.titleSmall
+                                .copyWith(color: Colors.white),
                           ),
                         ),
-                        const SizedBox(height: 20.0),
-                        getTextField(
-                          text: user.email!,
-                          isEdit: true,
-                          decoration: ThemeHelper()
-                              .textInputDecoration('E-mail address', ''),
-                          valError: 'Please enter your email',
-                          readonly: true,
-                        ),
-                        getTextField(
-                          text: user.mobileNo!,
-                          isEdit: true,
-                          decoration: ThemeHelper().textInputDecoration(
-                              'Mobile Number', 'Enter your mobile number'),
-                          validator: (val) {
-                            if (val!.isEmpty) {
-                              return "Please enter the mobile number";
-                              // ignore: prefer_is_not_empty
-                            } else if (!(val.isEmpty) &&
-                                !RegExp(r"^(\d+)*$").hasMatch(val)) {
-                              return "Enter a valid mobile number";
+                        onPressed: () async {
+                          if (_formKey.currentState!.validate()) {
+                            uID = Global.instance.user!.uId;
+                            print(uID);
+                            var iURL = image != null
+                                ? await uploadImage(file: image!)
+                                : "";
+
+                            DatabaseReference userRef =
+                                FirebaseDatabase.instance.ref().child('users');
+
+                            await userRef.child(uID.toString()).update({
+                              'fName': user.fName,
+                              'iNo': user.iNo,
+                              'email': user.email,
+                              'dob': user.dob,
+                              'phone': mobileNo,
+                              'avatar': iURL,
+                              'address': address,
+                              'country': countryValue,
+                              'state': stateValue,
+                              'city': cityValue,
+                              'zCode': zipcode
+                            });
+
+                            final snapshot =
+                                await userRef.child(uID.toString()).get();
+                            if (snapshot.exists) {
+                              Map data = await json
+                                  .decode(json.encode(snapshot.value));
+                              Global.instance.user!
+                                  .setUserInfo(uID.toString(), data);
+                              Fluttertoast.showToast(
+                                  msg: "Profile Details Updated Successfully");
+                              if (image != null) {
+                                await editAvatarPostList();
+                              }
+                            } else {
+                              Fluttertoast.showToast(
+                                  msg: 'Error Updating user profile');
                             }
-                            return null;
-                          },
-                          onChanged: (value) {
-                            mobileNo = value;
-                          },
-                        ),
-                        getTextField(
-                          text: user.address!,
-                          isEdit: true,
-                          decoration: ThemeHelper().textInputDecoration(
-                              'Address',
-                              'Enter your house/unit no, and street'),
-                          valError: 'Please enter your address',
-                          onChanged: (value) {
-                            address = value;
-                          },
-                        ),
-                        getCSCPicker(),
-                        const SizedBox(height: 20.0),
-                        getTextField(
-                          text: user.zipcode!,
-                          isEdit: true,
-                          decoration: ThemeHelper().textInputDecoration(
-                              'Zip Code', 'Enter your zip code'),
-                          valError: 'Please enter your zip code',
-                          onChanged: (value) {
-                            zipcode = value;
-                          },
-                        ),
-                        getSubmitButton(),
-                      ],
+
+                            Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const AccountScreen()),
+                                (Route<dynamic> route) => false);
+                          }
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -203,142 +334,51 @@ class _EditProfileState extends State<EditProfile> {
       child: Stack(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 120,
+            height: 120,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(100),
-              border: Border.all(width: 5, color: Colors.black),
-              color: Colors.white,
-              boxShadow: const [
+              shape: BoxShape.circle,
+              border: Border.all(
+                width: 4,
+                color: AppTheme.primaryColor.withOpacity(0.2),
+              ),
+              color: AppTheme.cardColor,
+              boxShadow: [
                 BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 20,
-                  offset: Offset(5, 5),
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
                 ),
               ],
               image: DecorationImage(
+                fit: BoxFit.cover,
                 image: image != null
                     ? FileImage(image!)
                     : NetworkImage(imageURL) as ImageProvider,
               ),
             ),
-            child: Icon(
-              Icons.person,
-              color: Colors.grey.withOpacity(0.02),
-              size: 80.0,
-            ),
           ),
-          Container(
-            padding: EdgeInsets.fromLTRB(80, 80, 0, 0),
-            child: Icon(
-              Icons.add_circle,
-              color: Colors.grey.shade700,
-              size: 25.0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  getCSCPicker() {
-    return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          children: [
-            CSCPicker(
-              dropdownDecoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(10)),
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey.shade400, width: 1)),
-              flagState: CountryFlag.DISABLE,
-              currentCountry: user.country,
-              currentCity: user.city,
-              currentState: user.state,
-              onCountryChanged: (value) {
-                setState(() {
-                  countryValue = value;
-                });
-              },
-              onStateChanged: (value) {
-                setState(() {
-                  stateValue = value;
-                });
-              },
-              onCityChanged: (value) {
-                setState(() {
-                  cityValue = value;
-                });
-              },
-            ),
-          ],
-        ));
-  }
-
-  getSubmitButton() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0),
-      child: Container(
-        decoration: ThemeHelper().buttonBoxDecoration(context),
-        child: ElevatedButton(
-          style: ThemeHelper().buttonStyle(),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(40, 10, 40, 10),
-            child: Text(
-              "Submit".toUpperCase(),
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  width: 2,
+                  color: AppTheme.backgroundColor,
+                ),
+              ),
+              child: Icon(
+                Icons.camera_alt_outlined,
                 color: Colors.white,
+                size: 20,
               ),
             ),
           ),
-          onPressed: () async {
-            if (_formKey.currentState!.validate()) {
-              uID = Global.instance.user!.uId;
-              print(uID);
-              var iURL = image != null ? await uploadImage(file: image!) : "";
-
-              DatabaseReference userRef =
-                  FirebaseDatabase.instance.ref().child('users');
-
-              await userRef.child(uID.toString()).update({
-                'fName': user.fName,
-                'iNo': user.iNo,
-                'email': user.email,
-                'dob': user.dob,
-                'phone': mobileNo,
-                'avatar': iURL,
-                'address': address,
-                'country': countryValue,
-                'state': stateValue,
-                'city': cityValue,
-                'zCode': zipcode
-              });
-
-              //get user data snapshot
-              final snapshot = await userRef.child(uID.toString()).get();
-              if (snapshot.exists) {
-                Map data = await json.decode(json.encode(snapshot.value));
-                //set new data to Global User instance
-                Global.instance.user!.setUserInfo(uID.toString(), data);
-                Fluttertoast.showToast(
-                    msg: "Profile Details Updated Successfully");
-                if (image != null) {
-                  //edit user profile in posts data
-                  await editAvatarPostList();
-                }
-                ;
-              } else {
-                Fluttertoast.showToast(msg: 'Error Updating user profile');
-              }
-
-              Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                      builder: (context) => const AccountScreen()),
-                  (Route<dynamic> route) => false);
-            }
-          },
-        ),
+        ],
       ),
     );
   }

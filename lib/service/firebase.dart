@@ -233,15 +233,23 @@ Future getSOSData(String userId) async {
 
 //SOS methods
 Future getRecipientContact(String userId) async {
-  List<String> recipientList = [];
-  final contactRef = FirebaseDatabase.instance.ref().child('contacts/$userId');
-  await contactRef.onValue.listen((event) async {
-    for (final child in event.snapshot.children) {
-      final contactID = await json.decode(json.encode(child.key));
-      Map data = await json.decode(json.encode(child.value));
+  try {
+    final contactRef =
+        FirebaseDatabase.instance.ref().child('contacts/$userId');
+    final snapshot = await contactRef.get();
 
-      recipientList.add(data["contactNo"]);
+    if (snapshot.exists) {
+      List<Map<String, dynamic>> contacts = [];
+      final data = snapshot.value as Map;
+      data.forEach((key, value) {
+        final contactData = json.decode(json.encode(value));
+        contacts.add(contactData);
+      });
+      return contacts;
     }
-  });
-  return recipientList;
+    return null;
+  } catch (e) {
+    print('Error getting recipient contacts: $e');
+    return null;
+  }
 }

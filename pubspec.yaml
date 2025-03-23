@@ -50,15 +50,12 @@ dependencies:
   http: any
   google_maps_flutter: ^2.6.0
   flutter_google_places: ^0.3.0
-  #geocoding: ^2.0.5
   geolocator: ^11.0.0
   photo_view: ^0.14.0
-
   file_picker: ^6.2.0
   awesome_notifications: ^0.9.2
   flutter_background: ^1.1.0
   flutter_ringtone_player: ^4.0.0+2
-  # flutter_sms: ^2.3.3
   flutter_launcher_icons: ^0.13.1
   shared_preferences: ^2.0.15
   webview_flutter: ^4.7.0
@@ -68,9 +65,9 @@ dependencies:
   news_api_flutter_package: ^1.1.1
   cached_network_image: ^3.3.1
   google_maps_webservice: ^0.0.19
-  # google_api_headers: ^3.8.3
   flutter_local_notifications: ^17.0.0
   emailjs: ^1.1.0
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:
