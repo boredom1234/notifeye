@@ -5,6 +5,7 @@ import 'package:crime/help_feed/models/comment_model.dart';
 import 'package:crime/help_feed/screens/add_edit_screen.dart';
 import 'package:crime/utils/bottom_navigation.dart';
 import 'package:crime/utils/custom_widgets.dart';
+import 'package:crime/utils/theme.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -28,352 +29,498 @@ class PostFeedScreen extends StatefulWidget {
 
 const kGoogleApiKey = 'AIzaSyACR85dcvtoBdJ4i9xsIIs2QDNDfVWduIU';
 
-class _PostFeedScreenState extends State<PostFeedScreen> {
+class _PostFeedScreenState extends State<PostFeedScreen>
+    with SingleTickerProviderStateMixin {
   List<Post> initPostList = [];
   List<Post> postList = [];
-  late Timer _timer;
-
-  TextEditingController controller = TextEditingController();
-
-  String uID = "0";
-
-  final Mode _mode = Mode.overlay;
-
-  String filter = "";
-  bool onLoading = true;
+  late StreamSubscription<DatabaseEvent> _postSubscription;
+  bool isLoading = true;
   String? choosenLocation;
+  TextEditingController controller = TextEditingController();
+  String uID = "0";
+  final Mode _mode = Mode.overlay;
+  late AnimationController _refreshIconController;
 
-  getAlldata() async {
-    initPostList = await getPostList();
-    postList = initPostList;
-    setState(() {
-      if (kDebugMode) {
-        print("hello1: $postList");
-      }
-      onLoading = false;
-    });
+  Future<void> setupPostListener() async {
+    final postRef = FirebaseDatabase.instance.ref().child('post');
+
+    _postSubscription = postRef.onValue.listen(
+      (event) async {
+        if (!mounted) return;
+
+        setState(() => isLoading = true);
+
+        try {
+          List<Post> newPosts = [];
+          for (final child in event.snapshot.children) {
+            List<String> postMedia = [];
+            List<Comment> comments = [];
+
+            final postID = child.key!;
+            Map data = json.decode(json.encode(child.value));
+
+            if (data['media'] != null) {
+              for (int i = 0; i < data['media'].length; i++) {
+                postMedia.add(data['media'][i]["file"]);
+              }
+            }
+
+            if (data['comments'] != null) {
+              var commentData = data['comments'];
+              commentData.keys.forEach((key) {
+                var commentID = key;
+                var commentValue = commentData[commentID];
+                comments.add(Comment(
+                  commentID,
+                  commentValue['dateCreated'],
+                  commentValue['userID'],
+                  commentValue['comment'],
+                ));
+              });
+            }
+
+            newPosts.add(Post(
+              postId: postID,
+              userId: data['userID'],
+              fname: data['userName'],
+              location: data['location'],
+              dateCreated: DateTime.parse(data['dateCreated']),
+              avatar: data['avatar'],
+              content: data['content'],
+              priority: data['priority'],
+              title: data['title'],
+              media: postMedia,
+              comments: comments,
+            ));
+          }
+
+          if (mounted) {
+            setState(() {
+              initPostList = newPosts;
+              postList = List.from(newPosts)
+                ..sort((b, a) => a.dateCreated!.compareTo(b.dateCreated!));
+              isLoading = false;
+            });
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print("Error processing posts: $e");
+          }
+          if (mounted) {
+            setState(() => isLoading = false);
+            Fluttertoast.showToast(
+                msg: "Error loading posts. Please try again.");
+          }
+        }
+      },
+      onError: (error) {
+        if (kDebugMode) {
+          print("Error in post stream: $error");
+        }
+        if (mounted) {
+          setState(() => isLoading = false);
+          Fluttertoast.showToast(msg: "Error loading posts. Please try again.");
+        }
+      },
+    );
   }
 
   @override
   void initState() {
     super.initState();
-    // Start the timer when the widget is initialized
-    // _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-    // Call your function to fetch data
-    getAlldata();
-    // });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Call your function to fetch data when the widget dependencies change
-    getAlldata();
+    _refreshIconController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    if (Global.instance.user!.isLoggedIn) {
+      uID = Global.instance.user!.uId!;
+    }
+    setupPostListener();
   }
 
   @override
   void dispose() {
-    // Cancel the timer when the widget is disposed to avoid memory leaks
-    _timer.cancel();
+    _refreshIconController.dispose();
+    _postSubscription.cancel();
+    controller.dispose();
     super.dispose();
   }
 
-  // List<String> filterType = ['Recent'];
+  Future<void> _handleRefresh() async {
+    _refreshIconController.repeat();
+    await setupPostListener();
+    _refreshIconController.stop();
+    _refreshIconController.reset();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       appBar: Global.instance.user!.isLoggedIn
           ? customAppBarAction(
               title: 'Post Feed',
-              actions: IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) =>
-                              AddEditPostScreen(isEdit: "ture")),
-                    );
-                  }))
-          : customAppBar(
-              title: "",
-            ),
-      body: onLoading
-          ? Container()
-          : Container(
-              constraints: const BoxConstraints(
-                maxHeight: double.infinity,
-              ),
-              child: RefreshIndicator(
-                onRefresh: () {
-                  return Future.delayed(const Duration(seconds: 1), () {
-                    setState(() {
-                      postList = initPostList;
-                      postList.sort(
-                          (b, a) => a.dateCreated!.compareTo(b.dateCreated!));
-                      getPostCardComponent(postList);
-                    });
-                  });
-                },
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10.0, right: 10),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          TextButton(
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.filter_alt_rounded,
-                                  color: Colors.red.shade900,
-                                ),
-                                Text("Filter List",
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                        color: Colors.red.shade900)),
-                              ],
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                getFilterPopUp();
-                              });
-                            },
-                          ),
-                        ],
-                      ),
+              actions: Row(
+                children: [
+                  RotationTransition(
+                    turns: Tween(begin: 0.0, end: 1.0)
+                        .animate(_refreshIconController),
+                    child: IconButton(
+                      icon: Icon(Icons.refresh, color: AppTheme.primaryColor),
+                      onPressed: _handleRefresh,
                     ),
-                    Expanded(
-                      child: ListView(
-                        children: [getPostCardComponent(postList)],
-                      ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.add, color: AppTheme.primaryColor),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        PageRouteBuilder(
+                          pageBuilder:
+                              (context, animation, secondaryAnimation) =>
+                                  AddEditPostScreen(isEdit: "true"),
+                          transitionsBuilder:
+                              (context, animation, secondaryAnimation, child) {
+                            var begin = const Offset(0.0, 1.0);
+                            var end = Offset.zero;
+                            var curve = Curves.easeInOutCubic;
+                            var tween = Tween(begin: begin, end: end)
+                                .chain(CurveTween(curve: curve));
+                            return SlideTransition(
+                              position: animation.drive(tween),
+                              child: child,
+                            );
+                          },
+                          transitionDuration: const Duration(milliseconds: 500),
+                        ),
+                      ).then((_) => setupPostListener());
+                    },
+                  ),
+                ],
+              ))
+          : customAppBar(title: ""),
+      body: Column(
+        children: [
+          // Filter button
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  icon: Icon(
+                    Icons.filter_alt_rounded,
+                    color: AppTheme.primaryColor,
+                    size: 20,
+                  ),
+                  label: Text(
+                    "Filter",
+                    style: AppTheme.titleSmall.copyWith(
+                      color: AppTheme.primaryColor,
                     ),
-                  ],
+                  ),
+                  style: TextButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(color: AppTheme.primaryColor),
+                    ),
+                  ),
+                  onPressed: () => getFilterPopUp(),
                 ),
-              ),
+              ],
             ),
+          ),
+
+          // Main content
+          Expanded(
+            child: isLoading
+                ? Center(
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 500),
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: child,
+                        );
+                      },
+                      child: CircularProgressIndicator(
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                  )
+                : postList.isEmpty
+                    ? Center(
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 500),
+                          builder: (context, value, child) {
+                            return Transform.scale(
+                              scale: value,
+                              child: child,
+                            );
+                          },
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.post_add_rounded,
+                                size: 64,
+                                color: AppTheme.textSecondary,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No posts yet',
+                                style: AppTheme.titleMedium.copyWith(
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                              if (Global.instance.user!.isLoggedIn) ...[
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      PageRouteBuilder(
+                                        pageBuilder: (context, animation,
+                                                secondaryAnimation) =>
+                                            AddEditPostScreen(isEdit: "true"),
+                                        transitionsBuilder: (context, animation,
+                                            secondaryAnimation, child) {
+                                          var begin = const Offset(0.0, 1.0);
+                                          var end = Offset.zero;
+                                          var curve = Curves.easeInOutCubic;
+                                          var tween = Tween(
+                                                  begin: begin, end: end)
+                                              .chain(CurveTween(curve: curve));
+                                          return SlideTransition(
+                                            position: animation.drive(tween),
+                                            child: child,
+                                          );
+                                        },
+                                        transitionDuration:
+                                            const Duration(milliseconds: 500),
+                                      ),
+                                    ).then((_) => setupPostListener());
+                                  },
+                                  style: AppTheme.primaryButtonStyle,
+                                  child: const Text('Create First Post'),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      )
+                    : RefreshIndicator(
+                        color: AppTheme.primaryColor,
+                        onRefresh: _handleRefresh,
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemCount: postList.length,
+                          itemBuilder: (context, index) {
+                            return TweenAnimationBuilder<double>(
+                              tween: Tween<double>(begin: 0.0, end: 1.0),
+                              duration:
+                                  Duration(milliseconds: 300 + (index * 100)),
+                              builder: (context, value, child) {
+                                return Transform.translate(
+                                  offset: Offset(0.0, 50 * (1 - value)),
+                                  child: Opacity(
+                                    opacity: value,
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                  vertical: 8.0,
+                                ),
+                                child: PostCard(
+                                  post: postList[index],
+                                  controller: controller,
+                                  onComment: (val, id) async {
+                                    DatabaseReference commentRef =
+                                        FirebaseDatabase.instance
+                                            .ref()
+                                            .child('post')
+                                            .child(id)
+                                            .child('comments');
+
+                                    String commentID = commentRef.push().key!;
+
+                                    await commentRef.child(commentID).set({
+                                      'userID': uID,
+                                      'dateCreated':
+                                          DateFormat('d MM, yyyy, h:mm a')
+                                              .format(DateTime.now()),
+                                      'comment': val
+                                    });
+
+                                    FocusManager.instance.primaryFocus
+                                        ?.unfocus();
+                                    controller.clear();
+                                    await setupPostListener();
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+          ),
+        ],
+      ),
       bottomNavigationBar: const CustomBottomNavigationBar(
         defaultSelectedIndex: 3,
       ),
     );
   }
 
-  getPostCardComponent(List postList) {
-    if (kDebugMode) {
-      print("heelo3: $postList");
-    }
-    return ListView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        scrollDirection: Axis.vertical,
-        shrinkWrap: true,
-        itemCount: postList.length,
-        itemBuilder: (BuildContext context, int index) {
-          return PostCard(
-            post: postList[index],
-            controller: controller,
-            onComment: (val, id) async {
-              DatabaseReference commentRef = FirebaseDatabase.instance
-                  .ref()
-                  .child('post')
-                  .child(id)
-                  .child('comments');
-
-              String commentID = commentRef.push().key!;
-
-              await commentRef.child(commentID).set({
-                'userID': uID,
-                'dateCreated':
-                    DateFormat('d MM, yyyy, h:mm a').format(DateTime.now()),
-                'comment': val
-              });
-              //refresh data
-              setState(() {
-                FocusManager.instance.primaryFocus?.unfocus();
-                controller.clear();
-                onLoading = true;
-              });
-              await getAlldata();
-            },
-          );
-        });
-  }
-
-// --------filter--------
-  getFilterPopUp() {
+  Future<void> getFilterPopUp() {
     return showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Enter Location'),
-            scrollable: true,
-            content: SizedBox(
-              width: MediaQuery.of(context).size.width,
-              child: Padding(
-                padding: const EdgeInsets.all(5.0),
-                child: Column(children: [
-                  // selectFilterField(),
-                  // const Padding(
-                  //   padding: EdgeInsets.symmetric(vertical: 10.0),
-                  //   // child: Text("OR"),
-                  // ),
-                  getLocationField()
-                ]),
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 300),
+          builder: (context, value, child) {
+            return Transform.scale(
+              scale: value,
+              child: Opacity(
+                opacity: value,
+                child: child,
               ),
+            );
+          },
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              dialogBackgroundColor: AppTheme.cardColor,
             ),
-            actions: [
-              ElevatedButton(
-                  style: ButtonStyle(
-                      backgroundColor:
-                          MaterialStateProperty.all(Colors.red.shade900)),
-                  child: const Text(
-                    "OK",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  }),
-            ],
-          );
-        });
-  }
-
-  selectFilterField() {
-    return Container(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Container(
-          width: 200,
-          padding: const EdgeInsets.only(left: 20, right: 20),
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(10.0),
-            border: Border.all(color: Colors.red.shade900),
-          ),
-          // child: DropdownButtonHideUnderline(
-          //   child: DropdownButtonFormField<String>(
-          //     decoration: const InputDecoration(
-          //       enabledBorder: InputBorder.none,
-          //       errorBorder: InputBorder.none,
-          //       focusedBorder: InputBorder.none,
-          //     ),
-          //     style: TextStyle(color: Colors.red.shade900, fontSize: 16),
-          //     isExpanded: true,
-          //     items: filterType.map((String value) {
-          //       return DropdownMenuItem<String>(
-          //         value: value,
-          //         child: Text(value),
-          //       );
-          //     }).toList(),
-          //     validator: (value) {
-          //       return null;
-          //     },
-          //     onChanged: (value) {
-          //       filter = value.toString();
-          //       getFilterList(filter);
-          //     },
-          //   ),
-          // )),
-        ));
-  }
-
-  getFilterList(String filter) {
-    switch (filter) {
-      case "Recent":
-        postList = initPostList;
-        postList.sort((b, a) => a.dateCreated!.compareTo(b.dateCreated!));
-        setState(() {
-          getPostCardComponent(postList);
-        });
-        break;
-      case "Priority":
-        postList = initPostList;
-        postList.sort((a, b) => a.priority!.compareTo(b.priority!));
-        setState(() {
-          getPostCardComponent(postList);
-        });
-        break;
-    }
-  }
-
-  getLocationField() {
-    return Container(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: OutlinedButton(
-          onPressed: _handlePressButton,
-          style: ButtonStyle(
-            shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                    side: BorderSide(color: Colors.red.shade900))),
-            backgroundColor: MaterialStateProperty.all(Colors.grey[200]),
-            padding: MaterialStateProperty.all(
-                const EdgeInsets.symmetric(vertical: 15)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(4.0),
-            child: Row(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 2.0),
-                  child: Icon(
-                    Icons.location_on_outlined,
-                    color: Colors.red.shade900,
-                    size: 15,
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Text(
+                'Filter by Location',
+                style: AppTheme.titleLarge,
+              ),
+              content: SizedBox(
+                width: MediaQuery.of(context).size.width * 0.8,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    OutlinedButton(
+                      onPressed: _handlePressButton,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryColor,
+                        side: BorderSide(color: AppTheme.primaryColor),
+                        padding: const EdgeInsets.all(16),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            color: AppTheme.primaryColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              choosenLocation ?? "Select Location",
+                              style: AppTheme.bodyMedium,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (choosenLocation != null) ...[
+                      const SizedBox(height: 16),
+                      TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            choosenLocation = null;
+                            postList = List.from(initPostList)
+                              ..sort((b, a) =>
+                                  a.dateCreated!.compareTo(b.dateCreated!));
+                          });
+                          Navigator.of(context).pop();
+                        },
+                        icon: Icon(
+                          Icons.clear,
+                          color: AppTheme.textSecondary,
+                          size: 18,
+                        ),
+                        label: Text(
+                          'Clear Filter',
+                          style: AppTheme.bodyMedium.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    'Cancel',
+                    style: AppTheme.bodyLarge.copyWith(
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                  child: Text(
-                    choosenLocation ?? "Enter Location",
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                  ),
-                )
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: AppTheme.primaryButtonStyle,
+                  child: const Text('Apply'),
+                ),
               ],
             ),
-          )),
+          ),
+        );
+      },
     );
   }
 
   Future<void> _handlePressButton() async {
     Prediction? p = await PlacesAutocomplete.show(
-        context: context,
-        apiKey: kGoogleApiKey,
-        language: 'en',
-        mode: _mode,
-        strictbounds: false,
-        types: [""],
-        logo: Container(
-          height: 1,
+      context: context,
+      apiKey: kGoogleApiKey,
+      language: 'en',
+      mode: _mode,
+      strictbounds: false,
+      types: [""],
+      logo: Container(height: 0),
+      decoration: InputDecoration(
+        hintText: 'Search Location',
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: AppTheme.primaryColor),
         ),
-        decoration: InputDecoration(
-            hintText: 'Enter the Location of the Incident',
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: const BorderSide(color: Colors.white))),
-        components: [
-          Component(Component.country, "in"),
-        ]);
+      ),
+      components: [Component(Component.country, "in")],
+    );
 
-    choosenLocation = p!.terms[0].value;
-    postList = [];
-    for (var post in initPostList) {
-      if (post.location == choosenLocation) {
-        postList.add(post);
-      }
-    }
+    if (p != null) {
+      setState(() {
+        choosenLocation = p.terms[0].value;
+        postList = initPostList
+            .where((post) =>
+                post.location?.toLowerCase() == choosenLocation?.toLowerCase())
+            .toList();
 
-    setState(() {
-      if (postList.isEmpty) {
-        Fluttertoast.showToast(msg: "No post for such location");
-      } else {
-        if (kDebugMode) {
-          print(postList[0].location);
+        if (postList.isEmpty) {
+          Fluttertoast.showToast(msg: "No posts found for this location");
         }
-        getPostCardComponent(postList);
-      }
-    });
+      });
+    }
   }
 }

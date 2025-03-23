@@ -1,5 +1,5 @@
-import 'package:crime/account/components/color.dart';
 import 'package:flutter/material.dart';
+import 'package:crime/utils/theme.dart';
 
 class CustomBottomNavigationBar extends StatefulWidget {
   final int defaultSelectedIndex;
@@ -13,66 +13,113 @@ class CustomBottomNavigationBar extends StatefulWidget {
 
 class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
   int _selectedIndex = 0;
-  List<IconData> iconList = [];
-  List<String> textList = [];
+  final List<IconData> iconList = [
+    Icons.notifications_active_outlined,
+    Icons.report_outlined,
+    Icons.home_outlined,
+    Icons.forum_outlined,
+    Icons.person_outline,
+  ];
+
+  final List<IconData> selectedIconList = [
+    Icons.notifications_active,
+    Icons.report,
+    Icons.home,
+    Icons.forum,
+    Icons.person,
+  ];
+
+  final List<String> textList = [
+    'Crime Alert',
+    'Report',
+    'Home',
+    'Posts',
+    'Account'
+  ];
 
   @override
-  initState() {
+  void initState() {
     super.initState();
-    iconList = [
-      Icons.map,
-      Icons.local_police_rounded,
-      Icons.home,
-      Icons.post_add_rounded,
-      Icons.person,
-    ];
-    textList = ['Crime Alert', 'Crime Report', 'Home', 'Posts', 'Account'];
     _selectedIndex = widget.defaultSelectedIndex;
   }
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> _navBarItemList = [];
-
-    for (var i = 0; i < iconList.length; i++) {
-      _navBarItemList.add(buildNavBarItem(iconList[i], i, textList[i]));
-    }
-    return Padding(
-      padding: const EdgeInsets.only(top: 8.0),
-      child: Row(
-        children: _navBarItemList,
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(
+              iconList.length,
+              (index) => buildNavBarItem(
+                selectedIcon: selectedIconList[index],
+                unselectedIcon: iconList[index],
+                index: index,
+                label: textList[index],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget buildNavBarItem(IconData icon, int index, String label) {
+  Widget buildNavBarItem({
+    required IconData selectedIcon,
+    required IconData unselectedIcon,
+    required int index,
+    required String label,
+  }) {
+    final isSelected = index == _selectedIndex;
+
     return GestureDetector(
-      onTap: () {
-        navigateBottom(index);
-      },
+      onTap: () => navigateBottom(index),
+      behavior: HitTestBehavior.opaque,
       child: Container(
-        height: 50,
         width: MediaQuery.of(context).size.width / iconList.length,
-        decoration: index == _selectedIndex
-            ? const BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(width: 4, color: secondaryColor),
-                ),
-              )
-            : const BoxDecoration(),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: index == _selectedIndex ? secondaryColor : primaryColor,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppTheme.primaryColor.withOpacity(0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                isSelected ? selectedIcon : unselectedIcon,
+                color:
+                    isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
+                size: 24,
+              ),
             ),
-            Text(label,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: index == _selectedIndex
-                      ? Colors.red.shade900
-                      : Colors.grey,
-                )),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: (isSelected ? AppTheme.bodySmall : AppTheme.bodySmall)
+                  .copyWith(
+                color:
+                    isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
           ],
         ),
       ),
@@ -80,25 +127,32 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
   }
 
   void navigateBottom(int index) {
+    if (index == _selectedIndex) return;
+
+    setState(() => _selectedIndex = index);
+
+    String route;
     switch (index) {
       case 0:
-        Navigator.pushReplacementNamed(context, "/crimeAlert");
+        route = "/crimeAlert";
         break;
       case 1:
-        Navigator.pushReplacementNamed(context, "/crimeReport");
+        route = "/crimeReport";
         break;
       case 2:
-        Navigator.pushReplacementNamed(context, "/home");
+        route = "/home";
         break;
       case 3:
-        Navigator.pushReplacementNamed(context, "/postFeed");
+        route = "/postFeed";
         break;
       case 4:
-        Navigator.pushReplacementNamed(context, "/account");
+        route = "/account";
         break;
-      case 5:
-        break;
+      default:
+        route = "/home";
     }
+
+    Navigator.of(context).pushReplacementNamed(route);
   }
 }
 

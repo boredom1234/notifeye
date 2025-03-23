@@ -14,8 +14,9 @@ import '../../login_register/models/user_modal.dart';
 import '../../service/api.dart';
 import '../../service/firebase.dart';
 import '../../service/global.dart';
-import '../../utils/custom_widgets.dart';
-import '../../utils/theme.dart';
+import '../../utils/custom_widgets.dart'
+    show getCustomButton, customAppBar, getTextField;
+import '../../utils/theme.dart' hide getCustomButton;
 import '../models/comment_model.dart';
 import 'package:google_maps_webservice/places.dart';
 
@@ -107,382 +108,493 @@ class _AddEditPostScreenState extends State<AddEditPostScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       appBar: customAppBar(
         title: isEdit ? "Edit Post" : "Add New Post",
       ),
-      body: ListView(children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 20, top: 20, right: 20),
-          child: Form(
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Form(
             key: _formKey,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Section Title
+                Text(
+                  'Post Details',
+                  style: AppTheme.headlineMedium.copyWith(
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Location and Type Fields
                 getLocationField(),
+                const SizedBox(height: 16),
                 selectPurposeField(),
-                getTextField(
-                    text: title,
-                    isEdit: isEdit,
-                    decoration: ThemeHelper().textInputDecoReport(
-                        'Enter title of the post', null, Colors.grey[200]),
-                    onChanged: (value) {
-                      title = value;
-                    }),
-                Column(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.only(bottom: 10),
-                      child: getTextField(
-                        minLines: 5,
-                        maxLines: 8,
-                        text: content,
-                        isEdit: isEdit,
-                        keyboardType: TextInputType.multiline,
-                        decoration: ThemeHelper().textInputDecoReport(
-                            'Write the post content..', null, Colors.grey[200]),
-                        onChanged: (val) {
-                          content = val;
-                        },
-                        validator: (val) {
-                          if (val!.isEmpty) {
-                            return "Please enter the content";
-                          }
-                          return null;
-                        },
+                const SizedBox(height: 16),
+
+                // Title Field
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextFormField(
+                      style: AppTheme.bodyMedium
+                          .copyWith(color: AppTheme.textColor),
+                      decoration: InputDecoration(
+                        hintText: 'Enter title of the post',
+                        hintStyle: AppTheme.bodyMedium
+                            .copyWith(color: AppTheme.textLightColor),
+                        border: InputBorder.none,
                       ),
-                      decoration: ThemeHelper().inputBoxDecorationShaddow(),
+                      onChanged: (value) {
+                        title = value;
+                      },
+                      validator: (val) {
+                        if (val!.isEmpty) {
+                          return "Please enter a title";
+                        }
+                        return null;
+                      },
                     ),
-                    Container(
-                      padding: EdgeInsets.only(bottom: 20),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Content Field
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextFormField(
+                      style: AppTheme.bodyMedium
+                          .copyWith(color: AppTheme.textColor),
+                      decoration: InputDecoration(
+                        hintText: 'Write the post content...',
+                        hintStyle: AppTheme.bodyMedium
+                            .copyWith(color: AppTheme.textLightColor),
+                        border: InputBorder.none,
+                      ),
+                      minLines: 5,
+                      maxLines: 8,
+                      onChanged: (val) {
+                        content = val;
+                      },
+                      validator: (val) {
+                        if (val!.isEmpty) {
+                          return "Please enter the content";
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Media Section
+                Text(
+                  'Media',
+                  style: AppTheme.headlineMedium.copyWith(
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Attach Images Button
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: InkWell(
+                    onTap: selectImages,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
                       child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            TextButton(
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.image_outlined,
-                                      color: Colors.red.shade900,
-                                    ),
-                                    Text(
-                                      "Attach Images",
-                                      style: TextStyle(
-                                          fontSize: 20,
-                                          color: Colors.red.shade900),
-                                    ),
-                                  ],
-                                ),
-                                onPressed: () {
-                                  selectImages();
-                                }),
-                          ]),
-                    ),
-                    Visibility(
-                      visible: haveImage,
-                      child: Container(
-                        height: 250,
-                        padding: EdgeInsets.only(bottom: 20),
-                        child: GridView.builder(
-                            itemCount: imageFileList!.length,
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 3),
-                            itemBuilder: (BuildContext context, int index) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8.0),
-                                child: Stack(
-                                  children: <Widget>[
-                                    Image.file(
-                                      File(imageFileList![index].path),
-                                      fit: BoxFit.cover,
-                                    ),
-                                    Positioned(
-                                      top: 0,
-                                      right: 0,
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            imageFileList!.removeAt(index);
-                                          });
-                                        },
-                                        child: Icon(
-                                          Icons.clear,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.image_outlined,
+                            color: AppTheme.primaryColor,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            "Attach Images",
+                            style: AppTheme.titleMedium.copyWith(
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Visibility(
-                      visible: haveEditImage,
-                      child: Container(
-                        height: 250,
-                        padding: EdgeInsets.only(bottom: 20),
-                        child: GridView.builder(
-                            itemCount: imageFileListEdit!.length,
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 3),
-                            itemBuilder: (BuildContext context, int index) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8.0),
-                                child: Stack(
-                                  children: <Widget>[
-                                    Image.network(
-                                      (imageFileListEdit![index]),
-                                      fit: BoxFit.cover,
-                                    ),
-                                    Positioned(
-                                      top: 0,
-                                      right: 0,
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            imageFileListEdit!.removeAt(index);
-                                          });
-                                        },
-                                        child: Icon(
-                                          Icons.clear,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Image Grid
+                if (haveImage)
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: imageFileList.length,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                        ),
+                        itemBuilder: (BuildContext context, int index) {
+                          return Stack(
+                            children: <Widget>[
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.file(
+                                  File(imageFileList[index].path),
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
                                 ),
-                              );
-                            }),
+                              ),
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.cardColor.withOpacity(0.7),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: IconButton(
+                                    icon: Icon(Icons.close, size: 20),
+                                    color: AppTheme.error,
+                                    padding: EdgeInsets.zero,
+                                    constraints: BoxConstraints(
+                                      minWidth: 32,
+                                      minHeight: 32,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        imageFileList.removeAt(index);
+                                        if (imageFileList.isEmpty) {
+                                          haveImage = false;
+                                        }
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
-                    getSubmitCancelButtonBar()
+                  ),
+
+                // Edit Image Grid
+                if (haveEditImage)
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: imageFileListEdit.length,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                        ),
+                        itemBuilder: (BuildContext context, int index) {
+                          return Stack(
+                            children: <Widget>[
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  imageFileListEdit[index],
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                ),
+                              ),
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.cardColor.withOpacity(0.7),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: IconButton(
+                                    icon: Icon(Icons.close, size: 20),
+                                    color: AppTheme.error,
+                                    padding: EdgeInsets.zero,
+                                    constraints: BoxConstraints(
+                                      minWidth: 32,
+                                      minHeight: 32,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        imageFileListEdit.removeAt(index);
+                                        if (imageFileListEdit.isEmpty) {
+                                          haveEditImage = false;
+                                        }
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 24),
+
+                // Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (isEdit) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => MyPostScreen()),
+                            );
+                          } else {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => PostFeedScreen()),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.cardColor,
+                          foregroundColor: AppTheme.textColor,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text("Cancel"),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: isEdit ? handleEdit : handleUpload,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: AppTheme.textColor,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(isEdit ? "Save" : "Upload"),
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 
-  getSubmitCancelButtonBar() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        getCustomButton(
-            text: "Cancel",
-            padding: 45,
-            background: Colors.black,
-            fontSize: 16,
-            onPressed: () {
-              setState(() {
-                if (isEdit) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => MyPostScreen()),
-                  );
-                } else {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => PostFeedScreen()),
-                  );
-                }
-              });
-            }),
-        getCustomButton(
-            text: isEdit ? "Save" : "Upload",
-            padding: 45,
-            background: Colors.red.shade900,
-            fontSize: 16,
-            onPressed: isEdit
-                ? () async {
-                    if (_formKey.currentState!.validate()) {
-                      String uID = user.uId!;
+  Future<void> handleEdit() async {
+    if (_formKey.currentState!.validate()) {
+      String uID = user.uId!;
+      DatabaseReference postRef =
+          FirebaseDatabase.instance.ref().child('post').child(postId!);
+      int prior = priorityList.indexOf(priority!);
 
-                      DatabaseReference postRef = FirebaseDatabase.instance
-                          .ref()
-                          .child('post')
-                          .child(postId!);
+      await postRef.update({
+        'location': location,
+        'priority': prior,
+        'title': title,
+        'content': content,
+      });
 
-                      int prior = priorityList.indexOf(priority!);
+      DatabaseReference mediaRef = postRef.child('media');
+      int index = haveEditImage ? imageFileListEdit.length : 0;
 
-                      await postRef.update({
-                        'location': location,
-                        'priority': prior,
-                        'title': title,
-                        'content': content,
-                      });
+      if (imageFileList.isNotEmpty) {
+        for (var file in imageFileList) {
+          var url = await uploadXImage(file: file);
+          await mediaRef.child(index.toString()).set({'file': url});
+          index++;
+        }
+      }
 
-                      DatabaseReference mediaRef = postRef.child('media');
+      Fluttertoast.showToast(
+        msg: "Post Updated successfully",
+        backgroundColor: AppTheme.success,
+        textColor: AppTheme.textColor,
+      );
 
-                      //check if post has previous images
-                      int index = 0;
-                      if (haveEditImage) {
-                        index = imageFileListEdit.length;
-                      } else {
-                        index = 0;
-                      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => MyPostScreen()),
+      );
+    }
+  }
 
-                      //upload if new media is added
-                      if (imageFileList.isNotEmpty) {
-                        var url;
-                        imageFileList.forEach((file) async {
-                          url = await uploadXImage(file: file!);
-                          await mediaRef
-                              .child(index.toString())
-                              .set({'file': url});
-                          index++;
-                        });
-                      }
+  Future<void> handleUpload() async {
+    if (_formKey.currentState!.validate()) {
+      String uID = user.uId!;
+      DatabaseReference postRef = FirebaseDatabase.instance.ref().child('post');
+      String postID = postRef.push().key!;
+      int prior = priorityList.indexOf(priority!);
 
-                      Fluttertoast.showToast(msg: "Post Updated successfully");
+      await postRef.child(postID).set({
+        'userID': uID,
+        'userName': fname,
+        'avatar': avatar,
+        'location': location,
+        'dateCreated': DateTime.now().toString(),
+        'priority': prior,
+        'title': title,
+        'content': content,
+      });
 
-                      setState(() {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => MyPostScreen()),
-                        );
-                      });
-                    }
-                  }
-                : () async {
-                    if (_formKey.currentState!.validate()) {
-                      String uID = user.uId!;
+      if (imageFileList.isNotEmpty) {
+        DatabaseReference mediaRef = postRef.child(postID).child('media');
+        int index = 0;
+        for (var file in imageFileList) {
+          var url = await uploadXImage(file: file);
+          await mediaRef.child(index.toString()).set({'file': url});
+          index++;
+        }
+      }
 
-                      DatabaseReference postRef =
-                          FirebaseDatabase.instance.ref().child('post');
-                      String postID = postRef.push().key!;
+      Fluttertoast.showToast(
+        msg: "New Post Uploaded successfully",
+        backgroundColor: AppTheme.success,
+        textColor: AppTheme.textColor,
+      );
 
-                      int prior = priorityList.indexOf(priority!);
-
-                      //upload post data in database
-                      await postRef.child(postID).set({
-                        'userID': uID,
-                        'userName': fname,
-                        'avatar': avatar,
-                        'location': location,
-                        'dateCreated': DateTime.now().toString(),
-                        'priority': prior,
-                        'title': title,
-                        'content': content,
-                      });
-
-                      //upload media if post have
-                      if (imageFileList.isNotEmpty) {
-                        DatabaseReference mediaRef =
-                            postRef.child(postID).child('media');
-                        var url;
-                        int index = 0;
-                        imageFileList.forEach((file) async {
-                          url = await uploadXImage(file: file!);
-                          await mediaRef
-                              .child(index.toString())
-                              .set({'file': url});
-                          index++;
-                        });
-                      }
-
-                      Fluttertoast.showToast(
-                          msg: "New Post Uploaded successfully");
-
-                      setState(() {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => PostFeedScreen()),
-                        );
-                      });
-                    }
-                  })
-      ],
-    );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => PostFeedScreen()),
+      );
+    }
   }
 
   selectPurposeField() {
-    return Container(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Container(
-          width: 400,
-          padding: const EdgeInsets.only(left: 20, right: 20),
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(10.0),
-            border: Border.all(color: Colors.grey.shade400),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                enabledBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-              ),
-              isExpanded: true,
-              hint: Text(
-                "Please select the purpose of the post",
-                style: TextStyle(fontSize: 15),
-              ),
-              value: priority,
-              items: priorityList.map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              validator: (value) {
-                if (priority == null) {
-                  return "Please select the purpose";
-                }
-                return null;
-              },
-              onChanged: (value) {
-                priority = value.toString();
-              },
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: DropdownButtonFormField<String>(
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
+            hintText: "Select Type of Crime",
+            hintStyle: AppTheme.bodyMedium.copyWith(
+              color: AppTheme.textLightColor,
             ),
-          )),
+          ),
+          icon: Icon(Icons.arrow_drop_down, color: AppTheme.primaryColor),
+          dropdownColor: AppTheme.cardColor,
+          style: AppTheme.bodyMedium.copyWith(
+            color: AppTheme.textColor,
+          ),
+          isExpanded: true,
+          value: priority,
+          items: priorityList.map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(
+                value,
+                style: AppTheme.bodyMedium.copyWith(
+                  color: AppTheme.textColor,
+                ),
+              ),
+            );
+          }).toList(),
+          validator: (value) {
+            if (priority == null) {
+              return "Please select the purpose";
+            }
+            return null;
+          },
+          onChanged: (value) {
+            setState(() {
+              priority = value.toString();
+            });
+          },
+        ),
+      ),
     );
   }
 
   getLocationField() {
-    return Container(
-      padding: EdgeInsets.only(bottom: 10),
-      child: OutlinedButton(
-          onPressed: _handlePressButton,
-          style: ButtonStyle(
-            shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                    side: BorderSide(color: Colors.grey.shade900))),
-            backgroundColor: MaterialStateProperty.all(
-              Colors.grey[200],
-            ),
-            padding: MaterialStateProperty.all(EdgeInsets.all(15)),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextButton(
+        onPressed: _handlePressButton,
+        style: ButtonStyle(
+          padding: MaterialStateProperty.all(
+            EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.location_on_outlined,
-                color: Colors.red.shade900,
-              ),
-              SizedBox(
-                width: 10,
-              ),
-              Container(
-                width: 280,
-                height: 18,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    Text(
-                      location ?? "Enter the Location of the Incident",
-                      style:
-                          TextStyle(color: Colors.grey.shade600, fontSize: 15),
-                    ),
-                  ],
+          shape: MaterialStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.location_on_outlined,
+              color: AppTheme.primaryColor,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                location ?? "Enter the Location of the Incident",
+                style: AppTheme.bodyMedium.copyWith(
+                  color: location != null
+                      ? AppTheme.textColor
+                      : AppTheme.textLightColor,
                 ),
-              )
-            ],
-          )),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

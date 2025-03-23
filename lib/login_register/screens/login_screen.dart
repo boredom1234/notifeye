@@ -30,14 +30,13 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surfaceColor,
       body: SingleChildScrollView(
         child: Column(
           children: [
             Container(
               height: _headerHeight,
-              child: HeaderWidget(
-                  _headerHeight), //let's create a common header widget
+              child: HeaderWidget(_headerHeight),
             ),
             SafeArea(
               child: Container(
@@ -48,12 +47,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Text(
                         'Welcome Back',
-                        style: TextStyle(
-                            fontSize: 40, fontWeight: FontWeight.bold),
+                        style: AppTheme.titleLarge.copyWith(
+                          fontSize: 40,
+                          color: AppTheme.textColor,
+                        ),
                       ),
                       Text(
                         'Sign In to your account',
-                        style: TextStyle(color: Colors.grey),
+                        style: AppTheme.bodyMedium.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
                       SizedBox(height: 30.0),
                       Form(
@@ -121,7 +124,34 @@ class _LoginScreenState extends State<LoginScreen> {
       padding: EdgeInsets.only(bottom: 20),
       child: TextFormField(
         obscureText: obscureText ?? false,
-        decoration: ThemeHelper().textInputDecoration(text!, hint!),
+        style: AppTheme.bodyMedium.copyWith(color: AppTheme.textColor),
+        decoration: InputDecoration(
+          labelText: text,
+          hintText: hint,
+          labelStyle:
+              AppTheme.bodyMedium.copyWith(color: AppTheme.textSecondary),
+          hintStyle:
+              AppTheme.bodyMedium.copyWith(color: AppTheme.textLightColor),
+          fillColor: AppTheme.cardColor,
+          filled: true,
+          contentPadding: EdgeInsets.fromLTRB(20, 10, 20, 10),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.0),
+            borderSide: BorderSide(color: AppTheme.primaryColor),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.0),
+            borderSide: BorderSide(color: AppTheme.dividerColor),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.0),
+            borderSide: BorderSide(color: AppTheme.error),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.0),
+            borderSide: BorderSide(color: AppTheme.error),
+          ),
+        ),
         onChanged: onChanged,
         validator: validator ??
             (val) {
@@ -131,40 +161,70 @@ class _LoginScreenState extends State<LoginScreen> {
               return null;
             },
       ),
-      decoration: ThemeHelper().inputBoxDecorationShaddow(),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
     );
   }
 
   redirectToRegister() {
     return Container(
       margin: EdgeInsets.fromLTRB(10, 20, 10, 20),
-      //child: Text('Don\'t have an account? Create'),
-      child: Text.rich(TextSpan(children: [
-        TextSpan(text: "Don\'t have an account? "),
-        TextSpan(
-          text: 'Create',
-          recognizer: TapGestureRecognizer()
-            ..onTap = () {
-              Navigator.pushNamed(context, "/register");
-            },
-          style: TextStyle(
-              fontWeight: FontWeight.bold, color: Colors.redAccent.shade700),
-        ),
-      ])),
+      child: Text.rich(TextSpan(
+        children: [
+          TextSpan(
+            text: "Don't have an account? ",
+            style: AppTheme.bodyMedium.copyWith(color: AppTheme.textSecondary),
+          ),
+          TextSpan(
+            text: 'Create',
+            recognizer: TapGestureRecognizer()
+              ..onTap = () {
+                Navigator.pushNamed(context, "/register");
+              },
+            style: AppTheme.bodyMedium.copyWith(
+              color: AppTheme.primaryColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      )),
     );
   }
 
   getSignInButton() {
     return Container(
-      decoration: ThemeHelper().buttonBoxDecoration(context),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: ElevatedButton(
-        style: ThemeHelper().buttonStyle(),
-        child: Padding(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.primaryColor,
+          foregroundColor: Colors.white,
           padding: EdgeInsets.fromLTRB(40, 10, 40, 10),
-          child: Text(
-            'Sign In'.toUpperCase(),
-            style: TextStyle(
-                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Text(
+          'Sign In'.toUpperCase(),
+          style: AppTheme.titleMedium.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
           ),
         ),
         onPressed: () async {

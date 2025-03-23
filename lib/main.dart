@@ -9,6 +9,7 @@ import 'package:crime/service/logger.dart';
 import 'package:crime/account/screens/manage_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:crime/utils/theme.dart';
 
 import 'account/components/webview.dart';
 import 'account/screens/account_screen.dart';
@@ -59,7 +60,68 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'NotifEye',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        useMaterial3: true,
+        colorScheme: ColorScheme.dark(
+          primary: AppTheme.primaryColor,
+          secondary: AppTheme.secondaryColor,
+          surface: AppTheme.surfaceColor,
+          background: AppTheme.backgroundColor,
+          error: AppTheme.error,
+        ),
+        scaffoldBackgroundColor: AppTheme.backgroundColor,
+        cardColor: AppTheme.cardColor,
+        dividerColor: AppTheme.dividerColor,
+        textTheme: TextTheme(
+          headlineLarge: AppTheme.headlineLarge,
+          headlineMedium: AppTheme.headlineMedium,
+          titleLarge: AppTheme.titleLarge,
+          titleMedium: AppTheme.titleMedium,
+          titleSmall: AppTheme.titleSmall,
+          bodyLarge: AppTheme.bodyLarge,
+          bodyMedium: AppTheme.bodyMedium,
+          bodySmall: AppTheme.bodySmall,
+        ),
+        appBarTheme: AppTheme.appBarTheme,
+        bottomNavigationBarTheme: AppTheme.bottomNavBarTheme,
+        dialogTheme: AppTheme.dialogTheme,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: AppTheme.primaryButtonStyle,
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: AppTheme.primaryColor,
+          ),
+        ),
+        iconTheme: IconThemeData(
+          color: AppTheme.primaryColor,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: AppTheme.cardColor,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: AppTheme.dividerColor),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: AppTheme.dividerColor),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: AppTheme.primaryColor),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: AppTheme.error),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: AppTheme.error),
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          hintStyle:
+              AppTheme.bodyMedium.copyWith(color: AppTheme.textSecondary),
+        ),
       ),
       home: SplashScreenWrapper(),
       routes: {

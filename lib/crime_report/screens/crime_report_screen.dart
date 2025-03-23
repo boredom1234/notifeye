@@ -83,93 +83,168 @@ class _CrimeReportScreenState extends State<CrimeReportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: customAppBar(title: 'Crime Report'),
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        title: Text('Crime Report', style: AppTheme.titleLarge),
+        backgroundColor: AppTheme.surfaceColor,
+        elevation: 2,
+        centerTitle: true,
+      ),
       body: Global.instance.user!.isLoggedIn
-          ? ListView(children: [
-              SafeArea(
+          ? SafeArea(
+              child: SingleChildScrollView(
                 child: Form(
                   key: _formKey,
                   child: Container(
-                    padding: EdgeInsets.fromLTRB(10, 10, 10, 10),
-                    margin: EdgeInsets.fromLTRB(10, 10, 10, 10),
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        getLocationField(),
-                        getDateTimeFields(),
-                        selectCrimeTypeField(),
-                        getCrimeDescField(),
-                        getCustomButton(
-                            text: "       Add Evidence Media / Files",
-                            background: Colors.white,
-                            fontSize: 15,
-                            padding: 45,
-                            icon: const Icon(Icons.camera_alt),
-                            onPressed: () {
-                              selectFiles();
-                            }),
-                        getShowSelectedImages(),
-                        getRadioButton(),
-                        Container(
-                          child: getCustomButton(
-                              text:
-                                  "          Additional Other Witness Details",
-                              background: Colors.white,
-                              padding: 10,
-                              fontSize: 15,
-                              icon: const Icon(Icons.add),
-                              onPressed: () {
-                                getPopUp();
-                              }),
+                        Text(
+                          'Report Details',
+                          style: AppTheme.headlineMedium.copyWith(
+                            color: AppTheme.primaryColor,
+                          ),
                         ),
+                        const SizedBox(height: 16),
+                        getLocationField(),
+                        const SizedBox(height: 16),
+                        getDateTimeFields(),
+                        const SizedBox(height: 16),
+                        selectCrimeTypeField(),
+                        const SizedBox(height: 16),
+                        getCrimeDescField(),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Evidence & Witnesses',
+                          style: AppTheme.headlineMedium.copyWith(
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: selectFiles,
+                          style: AppTheme.primaryButtonStyle,
+                          icon: const Icon(Icons.camera_alt),
+                          label: const Text('Add Evidence Media / Files'),
+                        ),
+                        const SizedBox(height: 8),
+                        getShowSelectedImages(),
+                        const SizedBox(height: 16),
+                        getRadioButton(),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: getPopUp,
+                          style: AppTheme.secondaryButtonStyle,
+                          icon: const Icon(Icons.person_add),
+                          label: const Text('Add Witness Details'),
+                        ),
+                        const SizedBox(height: 8),
                         getAddedList(),
+                        const SizedBox(height: 24),
                         getTermCheckBox(),
-                        getSubmitCancelButtonBar()
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pushNamed(context, '/crimeReport');
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.secondaryColor,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: const Text('Cancel'),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  if (_formKey.currentState!.validate()) {
+                                    await submitReport();
+                                  }
+                                },
+                                style: AppTheme.primaryButtonStyle,
+                                child: const Text('Submit Report'),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
                 ),
               ),
-            ])
+            )
           : Container(
-              padding: EdgeInsets.symmetric(horizontal: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
-                    padding: EdgeInsets.all(10),
-                    child: Text(
-                      "Please Log In or Register to Continue!",
-                      style: TextStyle(
-                        fontSize: 15,
-                      ),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceColor,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                  ),
-                  Container(
-                    child: getCustomButton(
-                        text: "Sign In",
-                        padding: 115,
-                        background: Colors.black,
-                        fontSize: 20,
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/login');
-                        }),
-                  ),
-                  Container(
-                    child: getCustomButton(
-                        text: "Register",
-                        padding: 110,
-                        background: Colors.red.shade900,
-                        fontSize: 20,
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/register');
-                        }),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.lock_outline,
+                          size: 48,
+                          color: AppTheme.primaryColor,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          "Please Log In or Register to Continue",
+                          style: AppTheme.titleLarge.copyWith(
+                            color: AppTheme.textColor,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/login');
+                            },
+                            style: AppTheme.primaryButtonStyle,
+                            child: const Text('Sign In'),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/register');
+                            },
+                            style: AppTheme.secondaryButtonStyle,
+                            child: const Text('Register'),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-      bottomNavigationBar: CustomBottomNavigationBar(
+      bottomNavigationBar: const CustomBottomNavigationBar(
         defaultSelectedIndex: 1,
       ),
     );
@@ -194,77 +269,89 @@ class _CrimeReportScreenState extends State<CrimeReportScreen> {
   getAddedList() {
     return Visibility(
       visible: havePerson,
-      child: Container(
-        padding: EdgeInsets.only(bottom: 10),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Container(
           height: 150,
-          color: Colors.white,
+          padding: const EdgeInsets.all(16),
           child: ListView.builder(
-              itemCount: personas.length,
-              itemBuilder: (BuildContext context, int index) {
-                return Card(
-                  child: ListTile(
-                      title: Text(personas[index].type!),
-                      subtitle: Text(personas[index].description!),
-                      trailing: IconButton(
-                        icon: Icon(Icons.cancel_outlined),
-                        onPressed: () {
-                          setState(() {
-                            personas.removeAt(index);
-                          });
-                        },
-                      )),
-                );
-              }),
+            itemCount: personas.length,
+            itemBuilder: (BuildContext context, int index) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppTheme.dividerColor,
+                  ),
+                ),
+                child: ListTile(
+                  title: Text(
+                    personas[index].type!,
+                    style: AppTheme.titleSmall,
+                  ),
+                  subtitle: Text(
+                    personas[index].description!,
+                    style: AppTheme.bodyMedium,
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    color: AppTheme.error,
+                    onPressed: () {
+                      setState(() {
+                        personas.removeAt(index);
+                        if (personas.isEmpty) {
+                          havePerson = false;
+                        }
+                      });
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
   getLocationField() {
-    return Container(
-        padding: EdgeInsets.only(bottom: 10),
-        child: OutlinedButton(
-          onPressed: _handlePressButton,
-          style: ButtonStyle(
-            shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                    side: BorderSide(color: Colors.grey.shade900))),
-            backgroundColor: MaterialStateProperty.all(Colors.white),
-            padding: MaterialStateProperty.all(EdgeInsets.all(15)),
-          ),
-          child: GestureDetector(
-            onTap: () {
-              CrimeAlertsScreen.getCurrentLocation();
-            },
-            child: Row(
-              children: [
-                Icon(
-                  Icons.location_on_outlined,
-                  color: Colors.red.shade900,
-                ),
-                SizedBox(
-                  width: 10,
-                ),
-                Container(
-                  width: 250,
-                  height: 18,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      Text(
-                        location ?? "Enter the Location of the Incident",
-                        style: TextStyle(
-                            color: Colors.grey.shade600, fontSize: 16),
-                      ),
-                    ],
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: _handlePressButton,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(
+                Icons.location_on_outlined,
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  location ?? "Enter the Location of the Incident",
+                  style: AppTheme.bodyMedium.copyWith(
+                    color: location != null
+                        ? AppTheme.textColor
+                        : AppTheme.textLightColor,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ));
+        ),
+      ),
+    );
   }
 
   Future<void> _handlePressButton() async {
@@ -305,454 +392,483 @@ class _CrimeReportScreenState extends State<CrimeReportScreen> {
 
   getDateTimeFields() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Container(
-          padding: const EdgeInsets.only(bottom: 10),
-          width: 175,
-          decoration: ThemeHelper().inputBoxDecorationShaddow(),
-          child: TextFormField(
-            controller: dateCtl,
-            readOnly: true,
-            decoration: ThemeHelper().textInputDecoReport('Select Date',
-                Icon(Icons.calendar_today, color: Colors.red.shade900)),
-            onTap: () async {
-              pickedDate = await showDatePicker(
-                context: context,
-                initialDate: DateTime.now(),
-                firstDate: DateTime(1950),
-                lastDate: DateTime.now(),
-                builder: (context, child) {
-                  return Theme(
-                    data: Theme.of(context).copyWith(
-                      colorScheme: ColorScheme.light(
-                        primary: Colors.red, // <-- SEE HERE
-                        onPrimary: Colors.white, // <-- SEE HERE
-                        onSurface: Colors.grey[900]!, // <-- SEE HERE
+        Expanded(
+          child: Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: InkWell(
+              onTap: () async {
+                pickedDate = await showDatePicker(
+                  context: context,
+                  initialDate: DateTime.now(),
+                  firstDate: DateTime(1950),
+                  lastDate: DateTime.now(),
+                  builder: (context, child) {
+                    return Theme(
+                      data: Theme.of(context).copyWith(
+                        colorScheme: ColorScheme.light(
+                          primary: AppTheme.primaryColor,
+                          onPrimary: Colors.white,
+                          onSurface: AppTheme.textColor,
+                        ),
                       ),
-                      textButtonTheme: TextButtonThemeData(
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.red, // button text color
+                      child: child!,
+                    );
+                  },
+                );
+                if (pickedDate != null) {
+                  formattedDate = DateFormat('yyyy-MM-dd').format(pickedDate!);
+                  dateCtl.text = formattedDate!;
+                  setState(() {});
+                }
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today,
+                      color: AppTheme.primaryColor,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        dateCtl.text.isNotEmpty ? dateCtl.text : 'Select Date',
+                        style: AppTheme.bodyMedium.copyWith(
+                          color: dateCtl.text.isNotEmpty
+                              ? AppTheme.textColor
+                              : AppTheme.textLightColor,
                         ),
                       ),
                     ),
-                    child: child!,
-                  );
-                },
-              );
-              formattedDate = DateFormat('yyyy-MM-dd').format(pickedDate!);
-              dateCtl.text = formattedDate!;
-            },
-            validator: (val) {
-              if (val!.isEmpty) {
-                return "Please select a date";
-              }
-              return null;
-            },
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
-        Container(
-          width: 155,
-          padding: EdgeInsets.only(bottom: 10),
-          child: TextFormField(
-            controller: timeCtl,
-            readOnly: true,
-            decoration: ThemeHelper().textInputDecoReport(
-                'Select Time',
-                Icon(
-                  Icons.watch_later_outlined,
-                  color: Colors.red.shade900,
-                )),
-            onTap: () async {
-              pickedTime = await showTimePicker(
-                context: context,
-                initialTime: TimeOfDay.now(),
-                builder: (context, child) {
-                  return Theme(
-                    data: Theme.of(context).copyWith(
-                      colorScheme: ColorScheme.light(
-                        primary: Colors.red, // <-- SEE HERE
-                        onPrimary: Colors.white, // <-- SEE HERE
-                        onSurface: Colors.grey[900]!, // <-- SEE HERE
+        const SizedBox(width: 16),
+        Expanded(
+          child: Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: InkWell(
+              onTap: () async {
+                pickedTime = await showTimePicker(
+                  context: context,
+                  initialTime: TimeOfDay.now(),
+                  builder: (context, child) {
+                    return Theme(
+                      data: Theme.of(context).copyWith(
+                        colorScheme: ColorScheme.light(
+                          primary: AppTheme.primaryColor,
+                          onPrimary: Colors.white,
+                          onSurface: AppTheme.textColor,
+                        ),
                       ),
-                      textButtonTheme: TextButtonThemeData(
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.red, // button text color
+                      child: child!,
+                    );
+                  },
+                );
+                if (pickedTime != null) {
+                  timeCtl.text = formatTimeOfDay(pickedTime!);
+                  setState(() {});
+                }
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      color: AppTheme.primaryColor,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        timeCtl.text.isNotEmpty ? timeCtl.text : 'Select Time',
+                        style: AppTheme.bodyMedium.copyWith(
+                          color: timeCtl.text.isNotEmpty
+                              ? AppTheme.textColor
+                              : AppTheme.textLightColor,
                         ),
                       ),
                     ),
-                    child: child!,
-                  );
-                },
-              );
-              //String formattedDate = DateFormat('HH:mm:ss').format(pickedDate!);
-              timeCtl.text = formatTimeOfDay(pickedTime!);
-            },
-            validator: (val) {
-              if (val!.isEmpty) {
-                return "Please enter a time";
-              }
-              return null;
-            },
+                  ],
+                ),
+              ),
+            ),
           ),
-          decoration: ThemeHelper().inputBoxDecorationShaddow(),
         ),
       ],
     );
   }
 
   selectCrimeTypeField() {
-    return Container(
-      padding: EdgeInsets.only(bottom: 10),
-      child: Container(
-          width: 400,
-          padding: EdgeInsets.only(left: 20, right: 20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10.0),
-            border: Border.all(color: Colors.grey.shade400),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: DropdownButtonFormField<String>(
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
           ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                enabledBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-              ),
-              isExpanded: true,
-              hint: Text("Select Type of Crime"),
-              items: crimes.map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              validator: (value) {
-                if (type == null) {
-                  return "Please select the type of Crime";
-                }
-                return null;
-              },
-              onChanged: (value) {
-                type = value.toString();
-              },
+          icon: Icon(Icons.arrow_drop_down, color: AppTheme.primaryColor),
+          isExpanded: true,
+          hint: Text(
+            "Select Type of Crime",
+            style: AppTheme.bodyMedium.copyWith(
+              color: AppTheme.textLightColor,
             ),
-          )),
+          ),
+          value: type,
+          items: crimes.map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(
+                value,
+                style: AppTheme.bodyMedium,
+              ),
+            );
+          }).toList(),
+          onChanged: (value) {
+            setState(() {
+              type = value;
+            });
+          },
+        ),
+      ),
     );
   }
 
   getCrimeDescField() {
-    return Container(
-      padding: EdgeInsets.only(bottom: 10),
-      child: TextFormField(
-        minLines: 3,
-        maxLines: 5,
-        keyboardType: TextInputType.multiline,
-        decoration: ThemeHelper()
-            .textInputDecoReport("Enter the description of the incident"),
-        onChanged: (val) {
-          setState(() {
-            description = val;
-          });
-        },
-        validator: (val) {
-          if (val!.isEmpty) {
-            return "Description of the incident is required";
-          }
-          return null;
-        },
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
       ),
-      decoration: ThemeHelper().inputBoxDecorationShaddow(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: TextFormField(
+          minLines: 3,
+          maxLines: 5,
+          decoration: InputDecoration(
+            hintText: "Enter the description of the incident",
+            hintStyle: AppTheme.bodyMedium.copyWith(
+              color: AppTheme.textLightColor,
+            ),
+            border: InputBorder.none,
+          ),
+          style: AppTheme.bodyMedium,
+          onChanged: (val) {
+            setState(() {
+              description = val;
+            });
+          },
+          validator: (val) {
+            if (val!.isEmpty) {
+              return "Description of the incident is required";
+            }
+            return null;
+          },
+        ),
+      ),
     );
   }
 
   getShowSelectedImages() {
     return Visibility(
       visible: haveFile,
-      child: Container(
-        padding: EdgeInsets.only(bottom: 10),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Container(
-            height: 150,
-            color: Colors.white,
-            child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: GridView.builder(
-                    itemCount: selectedFiles.length,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3),
-                    itemBuilder: (BuildContext context, int index) {
-                      final extension =
-                          selectedFiles[index].extension ?? 'none';
-                      return Column(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                                color: Colors.grey.shade500,
-                                borderRadius: BorderRadius.circular(8)),
-                            padding: EdgeInsets.symmetric(
-                                vertical: 10, horizontal: 15),
-                            child: Text(
-                              '.$extension',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 20),
-                            ),
-                          ),
-                          Text(selectedFiles[index].name)
-                        ],
-                      );
-                    }))),
+          height: 150,
+          padding: const EdgeInsets.all(16),
+          child: GridView.builder(
+            itemCount: selectedFiles.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemBuilder: (BuildContext context, int index) {
+              final extension = selectedFiles[index].extension ?? 'none';
+              return Column(
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '.$extension',
+                        style: AppTheme.titleMedium.copyWith(
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    selectedFiles[index].name,
+                    style: AppTheme.bodySmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
 
   getRadioButton() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        Text(
-          "Please Select, I am the ",
-          style: TextStyle(fontSize: 16),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "I am the:",
+              style: AppTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            RadioListTile(
+              title: Text("Victim", style: AppTheme.bodyMedium),
+              value: "Victim",
+              groupValue: reporterType,
+              activeColor: AppTheme.primaryColor,
+              contentPadding: EdgeInsets.zero,
+              onChanged: (value) {
+                setState(() {
+                  reporterType = value.toString();
+                });
+              },
+            ),
+            RadioListTile(
+              title: Text("Witness", style: AppTheme.bodyMedium),
+              value: "Witness",
+              groupValue: reporterType,
+              activeColor: AppTheme.primaryColor,
+              contentPadding: EdgeInsets.zero,
+              onChanged: (value) {
+                setState(() {
+                  reporterType = value.toString();
+                });
+              },
+            ),
+            RadioListTile(
+              title: Text("Anonymous", style: AppTheme.bodyMedium),
+              value: "Anonymous",
+              groupValue: reporterType,
+              activeColor: AppTheme.primaryColor,
+              contentPadding: EdgeInsets.zero,
+              onChanged: (value) {
+                setState(() {
+                  reporterType = value.toString();
+                });
+              },
+            ),
+          ],
         ),
-        RadioListTile(
-          visualDensity: VisualDensity(horizontal: 0, vertical: -4),
-          contentPadding: EdgeInsets.symmetric(vertical: 0.0),
-          activeColor: Colors.red.shade900,
-          title: Text("Victim"),
-          value: "Victim",
-          groupValue: reporterType,
-          onChanged: (value) {
-            setState(() {
-              reporterType = value.toString();
-            });
-          },
-        ),
-        RadioListTile(
-          visualDensity: VisualDensity(horizontal: 0, vertical: -4),
-          contentPadding: EdgeInsets.symmetric(vertical: 0.0),
-          activeColor: Colors.red.shade900,
-          title: Text("Witness"),
-          value: "Witness",
-          groupValue: reporterType,
-          onChanged: (value) {
-            setState(() {
-              reporterType = value.toString();
-            });
-          },
-        ),
-        RadioListTile(
-          visualDensity: VisualDensity(horizontal: 0, vertical: -4),
-          contentPadding: EdgeInsets.symmetric(vertical: 0.0),
-          activeColor: Colors.red.shade900,
-          title: Text("Anonymous"),
-          value: "Anonymous",
-          groupValue: reporterType,
-          onChanged: (value) {
-            setState(() {
-              reporterType = value.toString();
-            });
-          },
-        )
-      ],
+      ),
     );
   }
 
   getTermCheckBox() {
-    return FormField<bool>(
-      builder: (state) {
-        return Padding(
-          padding: const EdgeInsets.only(top: 10.0, bottom: 10),
-          child: Column(
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Checkbox(
-                      activeColor: Colors.red.shade900,
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: FormField<bool>(
+          validator: (value) {
+            if (!checkboxValue) {
+              return 'You need to accept terms and conditions';
+            }
+            return null;
+          },
+          builder: (state) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Checkbox(
                       value: checkboxValue,
+                      activeColor: AppTheme.primaryColor,
                       onChanged: (value) {
                         setState(() {
                           checkboxValue = value!;
                           state.didChange(value);
                         });
-                      }),
-                  RichText(
-                    text: TextSpan(
-                      children: <TextSpan>[
-                        const TextSpan(
-                            text: "By submitting this form I acknowledge the"
-                                "\ninformation entered is true events and I have"
-                                "\nread and agree to the",
-                            style: TextStyle(color: Colors.grey)),
-                        TextSpan(
-                            text: ' Terms and Conditions.',
-                            style: TextStyle(
-                                color: Colors.red.shade900,
-                                fontWeight: FontWeight.bold)),
-                      ],
+                      },
+                    ),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: AppTheme.bodyMedium,
+                          children: [
+                            TextSpan(
+                              text:
+                                  "By submitting this form I acknowledge the information entered is true events and I have read and agree to the ",
+                              style: AppTheme.bodyMedium.copyWith(
+                                color: AppTheme.textColor,
+                              ),
+                            ),
+                            TextSpan(
+                              text: 'Terms and Conditions',
+                              style: AppTheme.bodyMedium.copyWith(
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            TextSpan(
+                              text: '.',
+                              style: AppTheme.bodyMedium.copyWith(
+                                color: AppTheme.textColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (state.hasError)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      state.errorText!,
+                      style: AppTheme.bodySmall.copyWith(
+                        color: AppTheme.error,
+                      ),
                     ),
                   ),
-                ],
-              ),
-              Container(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  state.errorText ?? '',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(
-                    color: Theme.of(context).errorColor,
-                    fontSize: 12,
-                  ),
-                ),
-              )
-            ],
-          ),
-        );
-      },
-      validator: (value) {
-        if (!checkboxValue) {
-          return 'You need to accept terms and conditions';
-        } else {
-          return null;
-        }
-      },
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 
-  getSubmitCancelButtonBar() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        getCustomButton(
-            text: "Cancel",
-            padding: 45,
-            background: Colors.black,
-            fontSize: 16,
-            onPressed: () {
-              Navigator.pushNamed(context, '/crimeReport');
-            }),
-        getCustomButton(
-            text: "Submit",
-            padding: 45,
-            background: Colors.red.shade900,
-            fontSize: 16,
-            onPressed: () async {
-              if (_formKey.currentState!.validate()) {
-                String uID = Global.instance.user!.uId!;
+  Future<void> submitReport() async {
+    String uID = Global.instance.user!.uId!;
+    DatabaseReference reportRef =
+        FirebaseDatabase.instance.ref().child('reports');
+    String reportID = reportRef.push().key!;
 
-                DatabaseReference reportRef =
-                    FirebaseDatabase.instance.ref().child('reports');
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
+      );
 
-                String reportID = reportRef.push().key!;
+      // Upload report data
+      await reportRef.child(reportID).set({
+        'location': location,
+        'longitude': lng!.toStringAsFixed(6),
+        'userID': uID,
+        'latitude': lat!.toStringAsFixed(6),
+        'date': formattedDate,
+        'time': formatTimeOfDay(pickedTime!),
+        'type': type,
+        'descr': description,
+        'persona': reporterType,
+      });
 
-                //upload new report data to database
-                reportRef.child(reportID).set({
-                  'location': location,
-                  'longitude': lng!.toStringAsFixed(6),
-                  'userID': uID,
-                  'latitude': lat!.toStringAsFixed(6),
-                  'date': formattedDate,
-                  'time': formatTimeOfDay(pickedTime!),
-                  'type': type,
-                  'descr': description,
-                  'persona': reporterType,
-                });
+      // Add persona details if any
+      if (personas.isNotEmpty) {
+        add_details =
+            "The following are additional details of people involved:";
+        DatabaseReference addRef =
+            reportRef.child(reportID).child('addDetails');
+        int index = 1;
+        for (var per in personas) {
+          await addRef
+              .child('detailNo $index')
+              .set({'persona': per.type, 'desc': per.description});
+          add_details += "\n$index Person Involved: ${per.type}"
+              "\n Person Description: ${per.description}";
+          index++;
+        }
+      }
 
-                //add persona list if have any in the report
-                if (personas.isNotEmpty) {
-                  add_details =
-                      "The following are additional details of people involved:";
-                  DatabaseReference addRef =
-                      reportRef.child(reportID).child('addDetails');
-                  int index = 1;
-                  for (var per in personas) {
-                    addRef
-                        .child('detailNo $index')
-                        .set({'persona': per.type, 'desc': per.description});
-                    add_details += "\n$index Person Involved: ${per.type}"
-                        "\n Person Description: ${per.description}";
-                    index++;
-                  }
-                }
+      // Add media files if any
+      if (selectedFiles.isNotEmpty) {
+        evidence_list = "The following are links to evidence media attached:";
+        DatabaseReference mediaRef = reportRef.child(reportID).child('media');
+        var url;
+        int index = 1;
+        for (var file in selectedFiles) {
+          url = await uploadFile(file: file!);
+          await mediaRef.child(index.toString()).set({'file': url});
+          evidence_list += "\n$index File link: $url";
+          index++;
+        }
+      }
 
-                //add media files list if have any in the report
-                if (selectedFiles.isNotEmpty) {
-                  evidence_list =
-                      "The following are links to evidence media attached:";
-                  DatabaseReference mediaRef =
-                      reportRef.child(reportID).child('media');
-                  var url;
-                  int index = 1;
-                  selectedFiles.forEach((file) async {
-                    url = await uploadFile(file: file!);
-                    mediaRef.child(index.toString()).set({'file': url});
-                    evidence_list += "\n$index File link: $url";
-                    index++;
-                  });
-                }
+      // Send email
+      await sendEmail(reportID);
 
-                //send email to official services and auto-reply to user
-                sendEmail(reportID).whenComplete(() {
-                  Fluttertoast.showToast(
-                      msg:
-                          "Report Submitted and Emailed to Respected Officials Successfully");
-                  Navigator.pushReplacementNamed(context, '/crimeReport');
-                });
-              }
-            })
-      ],
-    );
+      // Hide loading indicator
+      Navigator.pop(context);
+
+      // Show success message
+      Fluttertoast.showToast(
+        msg: "Report submitted successfully",
+        backgroundColor: AppTheme.success,
+        textColor: Colors.white,
+      );
+
+      // Navigate back
+      Navigator.pushReplacementNamed(context, '/crimeReport');
+    } catch (e) {
+      // Hide loading indicator
+      Navigator.pop(context);
+
+      // Show error message
+      Fluttertoast.showToast(
+        msg: "Error submitting report: $e",
+        backgroundColor: AppTheme.error,
+        textColor: Colors.white,
+      );
+    }
   }
 
   Future<void> sendEmail(String id) async {
-    // final user = Global.instance.user!;
-    // const serviceId = 'service_3wtntnq';
-    // const templateId = 'template_e4h860o';
-    // const userId = 'ogi9Qqhh-2V13gpmU';
-
-    // final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
-
-    // try {
-    //   final response = await http.post(
-    //     url,
-    //     headers: {
-    //       'Content-Type': 'application/json',
-    //     },
-    //     body: json.encode({
-    //       'service_id': serviceId,
-    //       'template_id': templateId,
-    //       'user_id': userId,
-    //       'template_params': {
-    //         'subject': '$id - $type Case at $formattedDate',
-    //         'user_contact': user.mobileNo,
-    //         'user_name': user.fName,
-    //         'user_email': user.email,
-    //         'address': '${user.address}, ${user.zipcode}, ${user.city}, '
-    //             '${user.state}, ${user.country}',
-    //         'date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
-    //         'crime': type,
-    //         'persona': reporterType,
-    //         'in_date': formattedDate,
-    //         'in_time': formatTimeOfDay(pickedTime!),
-    //         'in_location': location,
-    //         'description': description,
-    //         'evidence_list': evidence_list,
-    //         'add_details': add_details,
-    //       }
-    //     }),
-    //   );
-
-    //   if (kDebugMode) {
-    //     print(response.body);
-    //   }
-    // } catch (error) {
-    //   if (kDebugMode) {
-    //     print('Error sending email: $error');
-    //   }
-    //   // Handle error as needed
-    // }
-
     Map<String, dynamic> templateParams = {
       'name': 'James',
       'notes': 'Check this out!'

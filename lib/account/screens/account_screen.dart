@@ -2,7 +2,6 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:crime/account/components/color.dart';
 import 'package:crime/account/components/sos_setting_popup.dart';
 import 'package:flutter/material.dart';
-import 'package:hexcolor/hexcolor.dart';
 import '../../service/firebase.dart';
 import '../../service/global.dart';
 import '../../utils/bottom_navigation.dart';
@@ -22,7 +21,6 @@ class AccountScreen extends StatefulWidget {
 class _AccountScreenState extends State<AccountScreen> {
   bool isSwitched = false;
   String? url;
-
   var val;
 
   @override
@@ -32,128 +30,127 @@ class _AccountScreenState extends State<AccountScreen> {
       url = Global.instance.user!.avatar!;
     }
     AwesomeNotifications().setListeners(
-        onActionReceivedMethod: (ReceivedAction receivedAction) {
-      NotificationController.onActionReceivedMethod(receivedAction);
-      return val;
-    });
+      onActionReceivedMethod: (ReceivedAction receivedAction) {
+        NotificationController.onActionReceivedMethod(receivedAction);
+        return val;
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: Global.instance.user!.isLoggedIn
-          ? customAppBarAction(
-              title: "        Account",
-              actions: IconButton(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        title: Text('Account', style: AppTheme.titleLarge),
+        backgroundColor: AppTheme.surfaceColor,
+        elevation: 2,
+        centerTitle: true,
+        actions: Global.instance.user!.isLoggedIn
+            ? [
+                IconButton(
                   onPressed: () {
                     signOut();
                     setState(() {
                       Navigator.of(context).pushReplacementNamed("/home");
                     });
                   },
-                  icon:
-                      Icon(Icons.logout, color: Colors.red.shade900, size: 30)))
-          : customAppBar(
-              title: "",
-            ),
+                  icon: Icon(Icons.logout, color: AppTheme.primaryColor),
+                )
+              ]
+            : null,
+      ),
       body: Global.instance.user!.isLoggedIn
-          ? Container(
-              color: HexColor("#e1d8f2"),
-              child: ListView(
-                children: [
-                  //profile
-                  Container(
-                    padding: const EdgeInsets.only(
-                        top: 20, right: 10, left: 10, bottom: 10),
-                    // Set color: 909CC2,
-                    color: HexColor("#E8E2F3"),
+          ? ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Profile Section
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         getAvatar(),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2.0, left: 10),
+                        const SizedBox(width: 16),
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 Global.instance.user!.fName!,
-                                style: const TextStyle(
-                                    fontSize: 25, fontWeight: FontWeight.bold),
+                                style: AppTheme.titleLarge,
                               ),
-                              TextButton(
-                                  onPressed: () {
-                                    Navigator.pushNamed(
-                                        context, '/editProfile');
-                                  },
-                                  child: Row(
-                                    children: [
-                                      Text(
-                                        "Edit Profile",
-                                        style: TextStyle(
-                                            fontSize: 15,
-                                            color: HexColor("#031E3A")),
-                                      ),
-                                      const Icon(
-                                        Icons.chevron_right,
-                                        color: secondaryColor,
-                                        size: 25,
-                                      )
-                                    ],
-                                  ))
+                              const SizedBox(height: 8),
+                              TextButton.icon(
+                                onPressed: () {
+                                  Navigator.pushNamed(context, '/editProfile');
+                                },
+                                icon: const Icon(Icons.edit),
+                                label: const Text('Edit Profile'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppTheme.primaryColor,
+                                  padding: EdgeInsets.zero,
+                                ),
+                              ),
                             ],
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
-                  //general
-                  Container(
-                    padding:
-                        const EdgeInsets.only(top: 15, right: 10, left: 10),
-                    color: HexColor("#E8E2F3"),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        getHeaderText("General"),
-                        // getTextButton(
-                        //     text: "Help Center",
-                        //     onTap: () {
-                        //       Navigator.of(context).pushNamed('/helpCenter');
-                        //     }),
-                        getTextButton(
-                            text: "My Post",
-                            onTap: () {
-                              Navigator.of(context).pushNamed('/myPost');
-                            }),
-                        getTextButton(
-                            text: "Send Feedback",
-                            onTap: () {
-                              getSendFeedbackPopUp();
-                            }),
-                      ],
-                    ),
+                ),
+                const SizedBox(height: 24),
+
+                // General Section
+                getSectionHeader("General"),
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(
-                    height: 20,
+                  child: Column(
+                    children: [
+                      getListTile(
+                        "My Posts",
+                        Icons.article_outlined,
+                        () => Navigator.of(context).pushNamed('/myPost'),
+                      ),
+                      const Divider(height: 1),
+                      getListTile(
+                        "Send Feedback",
+                        Icons.feedback_outlined,
+                        getSendFeedbackPopUp,
+                      ),
+                    ],
                   ),
-                  //SOS setting
-                  Container(
-                    padding:
-                        const EdgeInsets.only(top: 15, right: 10, left: 10),
-                    color: HexColor("#E8E2F3"),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        getHeaderText("SOS Message"),
-                        Row(
+                ),
+                const SizedBox(height: 24),
+
+                // SOS Section
+                getSectionHeader("SOS Message"),
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            getTextButton(
-                                text: "Enable SOS Menu Bar", onTap: () {}),
+                            Text(
+                              "Enable SOS Menu Bar",
+                              style: AppTheme.bodyLarge,
+                            ),
                             Switch(
+                              value: isSwitched,
                               onChanged: (value) {
-                                //createPlantFoodNotification();
                                 setState(() {
                                   if (isSwitched) {
                                     NotificationController
@@ -166,91 +163,100 @@ class _AccountScreenState extends State<AccountScreen> {
                                   }
                                 });
                               },
-                              value: isSwitched,
-                              activeColor: Colors.grey.shade100,
-                              activeTrackColor: Colors.green.shade700,
-                              inactiveThumbColor: Colors.white,
-                              inactiveTrackColor: Colors.grey,
-                            )
+                              activeColor: AppTheme.primaryColor,
+                              activeTrackColor: AppTheme.primaryLight,
+                            ),
                           ],
                         ),
-                        getTextButton(
-                            text: "Edit SOS Message Content",
-                            onTap: () {
-                              Navigator.of(context).pushNamed('/editSOS');
-                            }),
-                        getTextButton(
-                            text: "Additional SOS Settings",
-                            onTap: () {
-                              getSosSettingFormPopUp();
-                            }),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  //Emergency Setting
-                  Container(
-                    padding:
-                        const EdgeInsets.only(top: 15, right: 10, left: 10),
-                    color: HexColor("#E8E2F3"),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        getHeaderText("Emergency Contacts"),
-                        getTextButton(
-                            text: "Add Emergency Contacts",
-                            onTap: () {
-                              getContactFormPopUp();
-                            }),
-                        getTextButton(
-                            text: "Manage Emergency Contacts",
-                            onTap: () {
-                              Navigator.pushNamed(context, '/manageContact');
-                            }),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : Container(
-              padding: EdgeInsets.symmetric(horizontal: 40),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(10),
-                    child: Text(
-                      "Please Log In or Register to Continue!",
-                      style: TextStyle(
-                        fontSize: 15,
                       ),
-                    ),
+                      const Divider(height: 1),
+                      getListTile(
+                        "Edit SOS Message",
+                        Icons.edit_note,
+                        () => Navigator.of(context).pushNamed('/editSOS'),
+                      ),
+                      const Divider(height: 1),
+                      getListTile(
+                        "Additional Settings",
+                        Icons.settings_outlined,
+                        getSosSettingFormPopUp,
+                      ),
+                    ],
                   ),
-                  Container(
-                    child: getCustomButton(
-                        text: "Sign In",
-                        padding: 115,
-                        background: Colors.black,
-                        fontSize: 20,
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/login');
-                        }),
+                ),
+                const SizedBox(height: 24),
+
+                // Emergency Contacts Section
+                getSectionHeader("Emergency Contacts"),
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  Container(
-                    child: getCustomButton(
-                        text: "Register",
-                        padding: 110,
-                        background: Colors.red.shade900,
-                        fontSize: 20,
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/register');
-                        }),
+                  child: Column(
+                    children: [
+                      getListTile(
+                        "Add Emergency Contact",
+                        Icons.person_add_outlined,
+                        getContactFormPopUp,
+                      ),
+                      const Divider(height: 1),
+                      getListTile(
+                        "Manage Contacts",
+                        Icons.contacts_outlined,
+                        () => Navigator.pushNamed(context, '/manageContact'),
+                      ),
+                    ],
                   ),
-                ],
+                ),
+              ],
+            )
+          : Center(
+              child: Card(
+                elevation: 2,
+                margin: const EdgeInsets.all(32),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.account_circle_outlined,
+                        size: 64,
+                        color: AppTheme.primaryColor,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "Please Log In or Register to Continue",
+                        style: AppTheme.titleMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () =>
+                              Navigator.pushNamed(context, '/login'),
+                          style: AppTheme.primaryButtonStyle,
+                          child: const Text('Sign In'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () =>
+                              Navigator.pushNamed(context, '/register'),
+                          style: AppTheme.secondaryButtonStyle,
+                          child: const Text('Register'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
       bottomNavigationBar: const CustomBottomNavigationBar(
@@ -259,92 +265,83 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
-  getHeaderText(String text) {
-    return Text(text,
-        style: TextStyle(
-            color: Colors.red.shade900,
-            fontSize: 25,
-            fontWeight: FontWeight.bold));
-  }
-
-  getTextButton({String? text, Function()? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.only(top: 15, bottom: 15),
-        child: Text(
-          text!,
-          style: const TextStyle(
-            fontSize: 18,
-          ),
+  Widget getSectionHeader(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(
+        text,
+        style: AppTheme.titleLarge.copyWith(
+          color: AppTheme.primaryColor,
         ),
       ),
     );
   }
 
-  getAvatar() {
-    return url != ""
-        ? Container(
-            height: 85.0,
-            width: 80,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              image: DecorationImage(
+  Widget getListTile(String text, IconData icon, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: AppTheme.primaryColor),
+      title: Text(text, style: AppTheme.bodyLarge),
+      trailing: Icon(Icons.chevron_right, color: AppTheme.textLightColor),
+      onTap: onTap,
+    );
+  }
+
+  Widget getAvatar() {
+    return Container(
+      height: 80,
+      width: 80,
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppTheme.primaryColor,
+          width: 2,
+        ),
+        image: url != null && url!.isNotEmpty
+            ? DecorationImage(
                 image: NetworkImage(url!),
                 fit: BoxFit.cover,
-              ), // border color
-              borderRadius: const BorderRadius.all(Radius.circular(50.0)),
-              border: Border.all(
-                color: HexColor("#031E3A"),
-                width: 1.0,
-              ),
-            ),
-            child: Container())
-        : Container(
-            height: 85.0,
-            width: 80,
-            decoration: BoxDecoration(
-              color: Colors.white, // border color
-              borderRadius: const BorderRadius.all(Radius.circular(50.0)),
-              border: Border.all(
-                color: Colors.black,
-                width: 3.0,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.only(right: 5.0),
-              child: Icon(
-                Icons.person,
-                color: Colors.red.shade900,
-                size: 78.0,
-              ),
-            ));
+              )
+            : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: url == null || url!.isEmpty
+          ? Icon(
+              Icons.person,
+              color: AppTheme.primaryColor,
+              size: 40,
+            )
+          : null,
+    );
   }
 
-  getSendFeedbackPopUp() {
-    return showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return SendEmail(title: "Feedback");
-        });
+  void getSendFeedbackPopUp() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => SendEmail(title: "Feedback"),
+    );
   }
 
-  getContactFormPopUp() {
-    return showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AddEmergencyContact(
-            mapEdit: null,
-            onEdit: (value) {},
-          );
-        });
+  void getContactFormPopUp() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => AddEmergencyContact(
+        mapEdit: null,
+        onEdit: (value) {},
+      ),
+    );
   }
 
-  getSosSettingFormPopUp() {
-    return showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return const SosSettingsPopUp();
-        });
+  void getSosSettingFormPopUp() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => const SosSettingsPopUp(),
+    );
   }
 }

@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:crime/service/global.dart';
+import 'package:crime/utils/theme.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +14,7 @@ import 'package:flutter_google_places/flutter_google_places.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../utils/bottom_navigation.dart';
 import '../../utils/custom_widgets.dart';
@@ -20,11 +23,14 @@ import '../models/alert_model.dart';
 class CrimeAlertsScreen extends StatefulWidget {
   const CrimeAlertsScreen({Key? key}) : super(key: key);
 
+  static final GlobalKey<_CrimeAlertsScreenState> globalKey =
+      GlobalKey<_CrimeAlertsScreenState>();
+
   @override
   State<CrimeAlertsScreen> createState() => _CrimeAlertsScreenState();
 
   static void getCurrentLocation() {
-    getCurrentLocation();
+    globalKey.currentState?.getCurrentLocation();
   }
 }
 
@@ -33,231 +39,501 @@ final homeScaffoldKey = GlobalKey<ScaffoldState>();
 
 class _CrimeAlertsScreenState extends State<CrimeAlertsScreen> {
   CameraPosition? initialCameraPosition;
-
   Set<Marker> markersList = {};
   List<Alert> alerts = [];
-
   double lng = 2.814014;
   double lat = 101.758337;
   late GoogleMapController googleMapController;
-
   final Mode _mode = Mode.overlay;
+  bool _isLoading = true;
+  bool _isSearching = false;
+  late SharedPreferences _prefs;
+  Set<String> _viewedAlerts = {};
 
-  getCurrentLocation() async {
-    final position = await _determinePosition();
-    setState(() {
-      lng = position.longitude;
-      lat = position.latitude;
+  // Custom marker icons
+  BitmapDescriptor? _alertMarkerIcon;
 
-      markersList.add(Marker(
-          markerId: const MarkerId("0"),
-          position: LatLng(lat, lng),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueGreen)));
-
-      googleMapController.animateCamera(CameraUpdate.newCameraPosition(
-          CameraPosition(target: LatLng(lat, lng), zoom: 17.0)));
-      getCrimeAlerts();
-    });
-  }
-
-  Future<void> getAlertList() async {
-    final reportRef = FirebaseDatabase.instance.ref().child('reports');
-    reportRef.onValue.listen((event) async {
-      for (final child in event.snapshot.children) {
-        final alertID = await json.decode(json.encode(child.key));
-        Map data = await json.decode(json.encode(child.value));
-
-        double? latitude = double.tryParse(data['latitude'] ?? '');
-        double? longitude = double.tryParse(data['longitude'] ?? '');
-
-        if (latitude != null && longitude != null) {
-          double distanceInMeters =
-              await Geolocator.distanceBetween(lat, lng, latitude, longitude);
-
-          // Check if the distance is less than 2 kilometres
-          if (distanceInMeters < 2000) {
-            // Send a notification
-            sendNotification(data["type"], data["date"]);
-          }
-
-          // Add marker only if latitude and longitude are valid
-          markersList.add(Marker(
-            markerId: MarkerId(alertID),
-            position: LatLng(latitude, longitude),
-            infoWindow: InfoWindow(
-              title: data["type"],
-              snippet:
-                  'Date: ${data["date"]}', // Add the incident date and time here
-            ),
-          ));
-        }
+  // Add dark map style
+  static const String _mapStyle = '''
+[
+  {
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#242f3e"
       }
-      setState(() {});
-    }, onError: (error) {
-      if (kDebugMode) {
-        print('Error getting post List');
+    ]
+  },
+  {
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#746855"
       }
-    });
+    ]
+  },
+  {
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": "#242f3e"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.locality",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#d59563"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#d59563"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#263c3f"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#6b9a76"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#38414e"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry.stroke",
+    "stylers": [
+      {
+        "color": "#212a37"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#9ca5b3"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#746855"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry.stroke",
+    "stylers": [
+      {
+        "color": "#1f2835"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#f3d19c"
+      }
+    ]
+  },
+  {
+    "featureType": "transit",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#2f3948"
+      }
+    ]
+  },
+  {
+    "featureType": "transit.station",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#d59563"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#17263c"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#515c6d"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": "#17263c"
+      }
+    ]
+  }
+]
+''';
+
+  Future<BitmapDescriptor> _createCustomMarkerBitmap(Color color) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+    final double width = 40.0;
+    final double height = 50.0;
+    final double radius = width / 3;
+
+    // Create the pin path
+    final Path path = Path();
+    path.moveTo(width / 2, height);
+    path.quadraticBezierTo(width / 2, height - 10, width, height - height / 3);
+    path.arcToPoint(
+      Offset(0, height - height / 3),
+      radius: Radius.circular(width / 2),
+      clockwise: false,
+    );
+    path.quadraticBezierTo(width / 2, height - 10, width / 2, height);
+    path.close();
+
+    // Draw shadow
+    final Paint shadowPaint = Paint()
+      ..color = Colors.black.withOpacity(0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+    canvas.drawPath(path.shift(const Offset(0, 2)), shadowPaint);
+
+    // Draw main pin body
+    final Paint paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(path, paint);
+
+    // Draw border
+    final Paint borderPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawPath(path, borderPaint);
+
+    // Draw inner circle
+    final Paint circlePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(
+      Offset(width / 2, height - height / 2),
+      radius / 1.5,
+      circlePaint,
+    );
+
+    final img = await pictureRecorder.endRecording().toImage(
+          width.toInt(),
+          height.toInt(),
+        );
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+
+    return BitmapDescriptor.fromBytes(data!.buffer.asUint8List());
   }
 
-  // Method to send notification
-  void sendNotification(String type, String date) {
-    // Initialize the notification plugin
-    FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-        FlutterLocalNotificationsPlugin();
-
-    // Define Android initialization settings
-    var initializationSettingsAndroid =
-        const AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    // Define IOS initialization settings
-    // var initializationSettingsIOS = IOSInitializationSettings();
-
-    // Initialize settings for both platforms
-    var initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      // iOS: initializationSettingsIOS,
-    );
-
-    // Initialize the notification plugin with the initialization settings
-    flutterLocalNotificationsPlugin.initialize(initializationSettings);
-
-    // Define notification details
-    var androidPlatformChannelSpecifics = const AndroidNotificationDetails(
-      'crime_alert_channel', // channel ID
-      'Crime Alert', // channel name
-      importance: Importance.max,
-      priority: Priority.high,
-      // sound: RawResourceAndroidNotificationSound('bgm'),
-      // playSound: true,
-      enableVibration: true,
-      enableLights: true,
-    );
-
-    var platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
-
-    // Create the notification
-    flutterLocalNotificationsPlugin.show(
-      0, // notification ID
-      'Crime Alert', // notification title
-      'Nearby $type reported on $date', // notification body
-      platformChannelSpecifics,
-    );
-  }
-
-  getCrimeAlerts() async {
-    await getAlertList();
-    setState(() {});
+  Future<void> _createMarkerIcon() async {
+    try {
+      _alertMarkerIcon = await _createCustomMarkerBitmap(Colors.red);
+    } catch (e) {
+      print('Error creating marker icon: $e');
+      // Fallback to default marker if custom creation fails
+      _alertMarkerIcon =
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+    }
   }
 
   @override
   void initState() {
-    initialCameraPosition =
-        CameraPosition(target: LatLng(lng, lat), zoom: 16.0);
     super.initState();
-    getCurrentLocation();
-    getCrimeAlerts();
+    _initializePrefs();
+    _initializeMap();
+    _createMarkerIcon();
+  }
+
+  Future<void> _initializePrefs() async {
+    _prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _viewedAlerts = _prefs.getStringList('viewed_alerts')?.toSet() ?? {};
+    });
+  }
+
+  Future<void> _markAlertAsViewed(String alertId) async {
+    setState(() {
+      _viewedAlerts.add(alertId);
+    });
+    await _prefs.setStringList('viewed_alerts', _viewedAlerts.toList());
+  }
+
+  bool _shouldShowNotification(String alertId, String timestamp) {
+    if (_viewedAlerts.contains(alertId)) {
+      return false;
+    }
+
+    try {
+      final alertTime = DateTime.parse(timestamp);
+      final now = DateTime.now();
+      final difference = now.difference(alertTime);
+
+      // Only show notifications for alerts within the last 24 hours
+      return difference.inHours <= 24;
+    } catch (e) {
+      print('Error parsing timestamp: $e');
+      return false;
+    }
+  }
+
+  void _initializeMap() async {
+    setState(() => _isLoading = true);
+    try {
+      final position = await _determinePosition();
+      setState(() {
+        lng = position.longitude;
+        lat = position.latitude;
+        initialCameraPosition = CameraPosition(
+          target: LatLng(lat, lng),
+          zoom: 15.0,
+        );
+      });
+      await getCrimeAlerts();
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: 'Error getting location: $e',
+        backgroundColor: AppTheme.error,
+        toastLength: Toast.LENGTH_LONG,
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> getCurrentLocation() async {
+    setState(() => _isLoading = true);
+    try {
+      final position = await _determinePosition();
+      setState(() {
+        lng = position.longitude;
+        lat = position.latitude;
+      });
+
+      googleMapController.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(lat, lng),
+            zoom: 15.0,
+          ),
+        ),
+      );
+
+      await getCrimeAlerts();
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: 'Error getting location: $e',
+        backgroundColor: AppTheme.error,
+        toastLength: Toast.LENGTH_LONG,
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (kDebugMode) {
-      print(markersList.length);
-    }
     return Scaffold(
-      appBar: customAppBar(title: 'Crime Alerts'),
+      key: CrimeAlertsScreen.globalKey,
+      appBar: AppBar(
+        title: Text('Crime Alerts', style: AppTheme.titleLarge),
+        backgroundColor: AppTheme.surfaceColor,
+        elevation: 2,
+        centerTitle: true,
+      ),
       body: Stack(
         children: [
-          GoogleMap(
-            initialCameraPosition: initialCameraPosition!,
-            markers: markersList.map((e) => e).toSet(),
-            mapType: MapType.normal,
-            onMapCreated: (GoogleMapController controller) {
-              googleMapController = controller;
-            },
-          ),
-          Container(
-            padding: const EdgeInsets.all(10),
-            child: ElevatedButton(
-                onPressed: _handlePressButton,
-                style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.all(Colors.white),
-                  padding: MaterialStateProperty.all(const EdgeInsets.all(10)),
+          // Google Map
+          _isLoading
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(
+                        color: AppTheme.primaryColor,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Loading map...',
+                        style: AppTheme.bodyMedium.copyWith(
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : GoogleMap(
+                  initialCameraPosition: initialCameraPosition!,
+                  markers: markersList,
+                  mapType: MapType.normal,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                  zoomControlsEnabled: false,
+                  onMapCreated: (GoogleMapController controller) {
+                    googleMapController = controller;
+                    googleMapController.setMapStyle(_mapStyle);
+                  },
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.search,
-                      color: Colors.red.shade900,
-                    ),
-                    const SizedBox(
-                      width: 10,
-                    ),
-                    Text(
-                      "Enter Area, City or State",
-                      style:
-                          TextStyle(color: Colors.grey.shade600, fontSize: 16),
-                    )
-                  ],
-                )),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding:
-                  const EdgeInsets.only(bottom: 10.0, left: 10, right: 100),
-              child: Container(
-                color: Colors.white,
-                padding: EdgeInsets.all(10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        getCurrentLocation();
-                        // Show toast
-                        Fluttertoast.showToast(
-                            msg: 'Getting current location...',
-                            toastLength: Toast.LENGTH_SHORT,
-                            gravity: ToastGravity.BOTTOM,
-                            timeInSecForIosWeb: 1,
-                            backgroundColor: Colors.grey,
-                            textColor: Colors.white,
-                            fontSize: 16.0);
-                      },
-                      child: const Icon(
-                        Icons.my_location,
-                        color: Colors.black,
+
+          // Search Bar
+          Positioned(
+            top: 16,
+            left: 16,
+            right: 16,
+            child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: InkWell(
+                onTap: _isSearching ? null : _handlePressButton,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.search,
+                        color: _isSearching
+                            ? AppTheme.textLightColor
+                            : AppTheme.primaryColor,
                       ),
-                    ),
-                    // Icon(Icons.location_on, color: Colors.deepPurple.shade400),
-                    // const Text(
-                    //   "Current Location",
-                    //   style: TextStyle(fontSize: 12),
-                    // ),
-                    GestureDetector(
-                      onTap: () {
-                        getCrimeAlerts();
-                        // Show toast
-                        Fluttertoast.showToast(
-                            msg: 'Getting crime alerts...',
-                            toastLength: Toast.LENGTH_SHORT,
-                            gravity: ToastGravity.BOTTOM,
-                            timeInSecForIosWeb: 1,
-                            backgroundColor: Colors.grey,
-                            textColor: Colors.white,
-                            fontSize: 16.0);
-                      },
-                      child: const Icon(
-                        Icons.notifications,
-                        color: Colors.red,
+                      const SizedBox(width: 12),
+                      Text(
+                        _isSearching ? "Searching..." : "Search location",
+                        style: AppTheme.bodyMedium.copyWith(
+                          color: _isSearching
+                              ? AppTheme.textLightColor
+                              : AppTheme.textColor,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
+            ),
+          ),
+
+          // Bottom Controls
+          Positioned(
+            bottom: 24,
+            left: 16,
+            right: 16,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Alert Count
+                if (markersList.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${markersList.length} crime alerts nearby',
+                      style: AppTheme.bodyMedium.copyWith(color: Colors.white),
+                    ),
+                  ),
+
+                // Controls Row
+                Row(
+                  children: [
+                    // Current Location Button
+                    FloatingActionButton(
+                      heroTag: "btn1",
+                      onPressed: _isLoading ? null : getCurrentLocation,
+                      backgroundColor: _isLoading
+                          ? AppTheme.textLightColor
+                          : AppTheme.surfaceColor,
+                      child: Icon(
+                        Icons.my_location,
+                        color:
+                            _isLoading ? Colors.white : AppTheme.primaryColor,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Refresh Alerts Button
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _isLoading
+                            ? null
+                            : () {
+                                getCrimeAlerts();
+                                Fluttertoast.showToast(
+                                  msg: 'Refreshing crime alerts...',
+                                  backgroundColor: AppTheme.secondaryColor,
+                                );
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _isLoading
+                              ? AppTheme.textLightColor
+                              : AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(Icons.refresh),
+                        label:
+                            Text(_isLoading ? 'Loading...' : 'Refresh Alerts'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -268,36 +544,219 @@ class _CrimeAlertsScreenState extends State<CrimeAlertsScreen> {
     );
   }
 
-  Future<Position> _determinePosition() async {
-    bool serviceEnabled;
-    LocationPermission permission;
+  Future<void> getAlertList() async {
+    final reportRef = FirebaseDatabase.instance.ref().child('reports');
+    try {
+      final event = await reportRef.once();
+      if (event.snapshot.value != null) {
+        markersList.clear();
+        int nearbyAlertsCount = 0;
 
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        final data = event.snapshot.value as Map;
+        for (var entry in data.entries) {
+          try {
+            final alertData = json.decode(json.encode(entry.value));
+            double? latitude = double.tryParse(alertData['latitude'] ?? '');
+            double? longitude = double.tryParse(alertData['longitude'] ?? '');
+
+            if (latitude != null && longitude != null) {
+              double distanceInMeters = await Geolocator.distanceBetween(
+                  lat, lng, latitude, longitude);
+
+              if (distanceInMeters < 2000) {
+                nearbyAlertsCount++;
+                if (_shouldShowNotification(entry.key, alertData["date"])) {
+                  sendNotification(alertData["type"], alertData["date"]);
+                }
+
+                // Create marker with opacity based on whether it's viewed
+                final isViewed = _viewedAlerts.contains(entry.key);
+                final markerColor = isViewed ? Colors.grey : Colors.red;
+
+                markersList.add(Marker(
+                  markerId: MarkerId(entry.key),
+                  position: LatLng(latitude, longitude),
+                  icon: _alertMarkerIcon ?? BitmapDescriptor.defaultMarker,
+                  alpha: isViewed
+                      ? 0.6
+                      : 1.0, // Make viewed markers semi-transparent
+                  infoWindow: InfoWindow(
+                    title: alertData["type"],
+                    snippet: 'Reported: ${alertData["date"]}',
+                    onTap: () {
+                      _markAlertAsViewed(entry.key);
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => Container(
+                          margin: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.cardColor,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 4,
+                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.dividerColor,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              ListTile(
+                                leading: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: markerColor.withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.warning_rounded,
+                                    color: markerColor,
+                                  ),
+                                ),
+                                title: Text(
+                                  alertData["type"],
+                                  style: AppTheme.titleMedium,
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Reported: ${alertData["date"]}',
+                                      style: AppTheme.bodyMedium.copyWith(
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                    if (!isViewed)
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 4),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.primaryColor
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'New',
+                                          style: AppTheme.bodySmall.copyWith(
+                                            color: AppTheme.primaryColor,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              if (alertData["description"] != null) ...[
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Text(
+                                    alertData["description"],
+                                    style: AppTheme.bodyMedium,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 16),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ));
+              }
+            }
+          } catch (e) {
+            print('Error processing alert ${entry.key}: $e');
+          }
+        }
+        setState(() {});
+      }
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: 'Error fetching alerts: $e',
+        backgroundColor: AppTheme.error,
+        toastLength: Toast.LENGTH_LONG,
+      );
+    }
+  }
+
+  void sendNotification(String type, String date) {
+    FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+        FlutterLocalNotificationsPlugin();
+
+    var initializationSettingsAndroid =
+        const AndroidInitializationSettings('@mipmap/ic_launcher');
+    var initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
+
+    flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+    var androidPlatformChannelSpecifics = const AndroidNotificationDetails(
+      'crime_alert_channel',
+      'Crime Alert',
+      importance: Importance.max,
+      priority: Priority.high,
+      enableVibration: true,
+      enableLights: true,
+      color: AppTheme.primaryColor,
+    );
+
+    var platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    flutterLocalNotificationsPlugin.show(
+      0,
+      'Crime Alert',
+      'Nearby $type reported on $date',
+      platformChannelSpecifics,
+    );
+  }
+
+  getCrimeAlerts() async {
+    await getAlertList();
+  }
+
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       Fluttertoast.showToast(
-          msg: "Please enable the location services to use this feature");
+        msg: 'Please enable location services',
+        backgroundColor: AppTheme.warning,
+        toastLength: Toast.LENGTH_LONG,
+      );
       return Future.error('Location services are disabled');
     }
-    //get permissions
-    permission = await Geolocator.checkPermission();
+
+    LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        return Future.error("Location permission denied");
+        return Future.error('Location permission denied');
       }
     }
+
     if (permission == LocationPermission.deniedForever) {
       return Future.error('Location permissions are permanently denied');
     }
-    //get location using geolocator
-    Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
 
-    return position;
+    return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
   }
 
   Future<void> _handlePressButton() async {
-    Prediction? p = await PlacesAutocomplete.show(
+    setState(() => _isSearching = true);
+    try {
+      Prediction? p = await PlacesAutocomplete.show(
         context: context,
         apiKey: kGoogleApiKey,
         onError: onError,
@@ -305,44 +764,85 @@ class _CrimeAlertsScreenState extends State<CrimeAlertsScreen> {
         language: 'en',
         strictbounds: false,
         types: [""],
-        logo: Container(
-          height: 1,
-        ),
         decoration: InputDecoration(
-            hintText: 'Enter Area, City or State',
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: const BorderSide(color: Colors.white))),
-        components: [Component(Component.country, "in")]);
+          hintText: 'Search location',
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppTheme.dividerColor),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppTheme.primaryColor),
+          ),
+        ),
+        components: [Component(Component.country, "in")],
+      );
 
-    displayPrediction(p!, homeScaffoldKey.currentState);
+      if (p != null) {
+        await displayPrediction(p, homeScaffoldKey.currentState);
+      }
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: 'Error searching location: $e',
+        backgroundColor: AppTheme.error,
+        toastLength: Toast.LENGTH_LONG,
+      );
+    } finally {
+      setState(() => _isSearching = false);
+    }
   }
 
-  void onError(PlacesAutocompleteResponse response) {}
+  void onError(PlacesAutocompleteResponse response) {
+    Fluttertoast.showToast(
+      msg: response.errorMessage ?? 'Unknown error',
+      backgroundColor: AppTheme.error,
+      toastLength: Toast.LENGTH_LONG,
+    );
+  }
 
   Future<void> displayPrediction(
-      Prediction p, ScaffoldState? currentState) async {
-    GoogleMapsPlaces places = GoogleMapsPlaces(
+    Prediction p,
+    ScaffoldState? currentState,
+  ) async {
+    setState(() => _isLoading = true);
+    try {
+      GoogleMapsPlaces places = GoogleMapsPlaces(
         apiKey: kGoogleApiKey,
-        apiHeaders: await const GoogleApiHeaders().getHeaders());
+        apiHeaders: await const GoogleApiHeaders().getHeaders(),
+      );
 
-    PlacesDetailsResponse detail = await places.getDetailsByPlaceId(p.placeId!);
+      PlacesDetailsResponse detail =
+          await places.getDetailsByPlaceId(p.placeId!);
+      final lat = detail.result.geometry!.location.lat;
+      final lng = detail.result.geometry!.location.lng;
 
-    lat = detail.result.geometry!.location.lat;
-    lng = detail.result.geometry!.location.lng;
+      setState(() {
+        this.lat = lat;
+        this.lng = lng;
+      });
 
-    //add marker for the selected place
-    markersList.add(Marker(
-        markerId: const MarkerId("0"),
-        position: LatLng(lat!, lng!),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
-        infoWindow: InfoWindow(title: detail.result.name)));
+      googleMapController.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(lat, lng),
+            zoom: 15.0,
+          ),
+        ),
+      );
 
-    //set camera to the place selected
-    setState(() async {
-      getCrimeAlerts();
-      googleMapController
-          .animateCamera(CameraUpdate.newLatLngZoom(LatLng(lat!, lng!), 14.0));
-    });
+      await getCrimeAlerts();
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: 'Error getting location details: $e',
+        backgroundColor: AppTheme.error,
+        toastLength: Toast.LENGTH_LONG,
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 }

@@ -54,7 +54,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surfaceColor,
       body: SingleChildScrollView(
         child: Stack(
           children: [
@@ -99,8 +99,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           child: TextFormField(
                             controller: dateCtl,
                             readOnly: true,
-                            decoration: ThemeHelper().textInputDecoration(
-                                'Date of Birth', 'Enter your date of birth'),
+                            style: AppTheme.bodyMedium
+                                .copyWith(color: AppTheme.textColor),
+                            decoration: InputDecoration(
+                              labelText: 'Date of Birth',
+                              hintText: 'Enter your date of birth',
+                              labelStyle: AppTheme.bodyMedium
+                                  .copyWith(color: AppTheme.textSecondary),
+                              hintStyle: AppTheme.bodyMedium
+                                  .copyWith(color: AppTheme.textLightColor),
+                              fillColor: AppTheme.cardColor,
+                              filled: true,
+                              contentPadding:
+                                  EdgeInsets.fromLTRB(20, 10, 20, 10),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide:
+                                    BorderSide(color: AppTheme.primaryColor),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide:
+                                    BorderSide(color: AppTheme.dividerColor),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide(color: AppTheme.error),
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide(color: AppTheme.error),
+                              ),
+                            ),
                             onTap: () async {
                               pickedDate = await showDatePicker(
                                 context: context,
@@ -110,27 +140,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 builder: (context, child) {
                                   return Theme(
                                     data: Theme.of(context).copyWith(
-                                      colorScheme: ColorScheme.light(
-                                        primary: Colors.red, // <-- SEE HERE
-                                        onPrimary: Colors.white, // <-- SEE HERE
-                                        onSurface:
-                                            Colors.grey[900]!, // <-- SEE HERE
+                                      colorScheme: ColorScheme.dark(
+                                        primary: AppTheme.primaryColor,
+                                        onPrimary: Colors.white,
+                                        surface: AppTheme.cardColor,
+                                        onSurface: AppTheme.textColor,
                                       ),
-                                      textButtonTheme: TextButtonThemeData(
-                                        style: TextButton.styleFrom(
-                                          foregroundColor:
-                                              Colors.red, // button text color
-                                        ),
-                                      ),
+                                      dialogBackgroundColor:
+                                          AppTheme.surfaceColor,
                                     ),
                                     child: child!,
                                   );
                                 },
                               );
-                              String formattedDate =
-                                  DateFormat('yyyy-MM-dd').format(pickedDate!);
-                              dateCtl.text = formattedDate;
-                              dob = formattedDate;
+                              if (pickedDate != null) {
+                                String formattedDate = DateFormat('yyyy-MM-dd')
+                                    .format(pickedDate!);
+                                dateCtl.text = formattedDate;
+                                dob = formattedDate;
+                              }
                             },
                             validator: (val) {
                               final eighteenY = DateTime(
@@ -143,7 +171,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               return null;
                             },
                           ),
-                          decoration: ThemeHelper().inputBoxDecorationShaddow(),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 20,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
                         ),
                         SizedBox(height: 20.0),
                         getTextField(
@@ -327,7 +364,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
       padding: EdgeInsets.only(bottom: 20),
       child: TextFormField(
         obscureText: obscureText ?? false,
-        decoration: ThemeHelper().textInputDecoration(text!, hint!),
+        style: AppTheme.bodyMedium.copyWith(color: AppTheme.textColor),
+        decoration: InputDecoration(
+          labelText: text,
+          hintText: hint,
+          labelStyle:
+              AppTheme.bodyMedium.copyWith(color: AppTheme.textSecondary),
+          hintStyle:
+              AppTheme.bodyMedium.copyWith(color: AppTheme.textLightColor),
+          fillColor: AppTheme.cardColor,
+          filled: true,
+          contentPadding: EdgeInsets.fromLTRB(20, 10, 20, 10),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.0),
+            borderSide: BorderSide(color: AppTheme.primaryColor),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.0),
+            borderSide: BorderSide(color: AppTheme.dividerColor),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.0),
+            borderSide: BorderSide(color: AppTheme.error),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.0),
+            borderSide: BorderSide(color: AppTheme.error),
+          ),
+        ),
         onChanged: onChanged,
         validator: validator ??
             (val) {
@@ -337,39 +401,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
               return null;
             },
       ),
-      decoration: ThemeHelper().inputBoxDecorationShaddow(),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
     );
   }
 
   getCSCPicker() {
     return Container(
-        padding: EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          children: [
-            CSCPicker(
-              dropdownDecoration: BoxDecoration(
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey.shade400, width: 1)),
-              flagState: CountryFlag.DISABLE,
-              onCountryChanged: (value) {
-                setState(() {
-                  countryValue = value;
-                });
-              },
-              onStateChanged: (value) {
-                setState(() {
-                  stateValue = value;
-                });
-              },
-              onCityChanged: (value) {
-                setState(() {
-                  cityValue = value;
-                });
-              },
+      padding: EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          CSCPicker(
+            dropdownDecoration: BoxDecoration(
+              borderRadius: BorderRadius.all(Radius.circular(10)),
+              color: AppTheme.cardColor,
+              border: Border.all(color: AppTheme.dividerColor, width: 1),
             ),
-          ],
-        ));
+            disabledDropdownDecoration: BoxDecoration(
+              borderRadius: BorderRadius.all(Radius.circular(10)),
+              color: AppTheme.cardColor.withOpacity(0.5),
+              border: Border.all(color: AppTheme.dividerColor, width: 1),
+            ),
+            selectedItemStyle:
+                AppTheme.bodyMedium.copyWith(color: AppTheme.textColor),
+            dropdownItemStyle:
+                AppTheme.bodyMedium.copyWith(color: AppTheme.textColor),
+            dropdownHeadingStyle:
+                AppTheme.bodyMedium.copyWith(color: AppTheme.textColor),
+            flagState: CountryFlag.DISABLE,
+            onCountryChanged: (value) {
+              setState(() {
+                countryValue = value;
+              });
+            },
+            onStateChanged: (value) {
+              setState(() {
+                stateValue = value;
+              });
+            },
+            onCityChanged: (value) {
+              setState(() {
+                cityValue = value;
+              });
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   getTermCheckBox() {
@@ -380,75 +466,91 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Row(
               children: <Widget>[
                 Checkbox(
-                    activeColor: Colors.red.shade900,
-                    value: checkboxValue,
-                    onChanged: (value) {
-                      setState(() {
-                        checkboxValue = value!;
-                        state.didChange(value);
-                      });
-                    }),
-                Text(
-                  "I agree to the Terms and Conditions "
-                  "\nand Privacy Policy.",
-                  style: TextStyle(color: Colors.grey),
+                  value: checkboxValue,
+                  onChanged: (value) {
+                    setState(() {
+                      checkboxValue = value!;
+                      state.didChange(value);
+                    });
+                  },
+                  activeColor: AppTheme.primaryColor,
+                  checkColor: Colors.white,
+                  fillColor: MaterialStateProperty.resolveWith((states) {
+                    if (states.contains(MaterialState.selected)) {
+                      return AppTheme.primaryColor;
+                    }
+                    return AppTheme.dividerColor;
+                  }),
+                ),
+                Expanded(
+                  child: Text(
+                    "I agree to the Terms and Conditions and Privacy Policy.",
+                    style: AppTheme.bodyMedium
+                        .copyWith(color: AppTheme.textSecondary),
+                  ),
                 ),
               ],
             ),
-            Container(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                state.errorText ?? '',
-                textAlign: TextAlign.left,
-                style: TextStyle(
-                  color: Theme.of(context).errorColor,
-                  fontSize: 12,
+            if (state.errorText != null)
+              Container(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  state.errorText!,
+                  style: AppTheme.bodySmall.copyWith(color: AppTheme.error),
                 ),
-              ),
-            )
+              )
           ],
         );
       },
       validator: (value) {
         if (!checkboxValue) {
           return 'You need to accept terms and conditions';
-        } else {
-          return null;
         }
+        return null;
       },
     );
   }
 
   getRegisterButton() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0),
-      child: Container(
-        decoration: ThemeHelper().buttonBoxDecoration(context),
-        child: ElevatedButton(
-          style: ThemeHelper().buttonStyle(),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(40, 10, 40, 10),
-            child: Text(
-              "Register".toUpperCase(),
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10.0),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          onPressed: () async {
-            if (_formKey.currentState!.validate()) {
-              bool isDuplicate = await checkUserExist(iNo);
-              if (!isDuplicate) {
-                registerUser();
-              } else {
-                Fluttertoast.showToast(
-                    msg: "The account already exists for that Identity No.");
-              }
-            }
-          },
+        ],
+      ),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.primaryColor,
+          foregroundColor: Colors.white,
+          padding: EdgeInsets.fromLTRB(40, 10, 40, 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
+        child: Text(
+          "Register".toUpperCase(),
+          style: AppTheme.titleMedium.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        onPressed: () async {
+          if (_formKey.currentState!.validate()) {
+            bool isDuplicate = await checkUserExist(iNo);
+            if (!isDuplicate) {
+              registerUser();
+            } else {
+              Fluttertoast.showToast(
+                  msg: "The account already exists for that Identity No.");
+            }
+          }
+        },
       ),
     );
   }
@@ -488,19 +590,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
   redirectToLogin() {
     return Container(
       margin: EdgeInsets.fromLTRB(10, 20, 10, 20),
-      child: Text.rich(TextSpan(children: [
-        TextSpan(text: "Already have an account? "),
-        TextSpan(
-          text: 'Sign In',
-          recognizer: TapGestureRecognizer()
-            ..onTap = () {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => LoginScreen()));
-            },
-          style: TextStyle(
-              fontWeight: FontWeight.bold, color: Colors.redAccent.shade700),
-        ),
-      ])),
+      child: Text.rich(TextSpan(
+        children: [
+          TextSpan(
+            text: "Already have an account? ",
+            style: AppTheme.bodyMedium.copyWith(color: AppTheme.textSecondary),
+          ),
+          TextSpan(
+            text: 'Sign In',
+            recognizer: TapGestureRecognizer()
+              ..onTap = () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => LoginScreen()));
+              },
+            style: AppTheme.bodyMedium.copyWith(
+              color: AppTheme.primaryColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      )),
     );
   }
 }
